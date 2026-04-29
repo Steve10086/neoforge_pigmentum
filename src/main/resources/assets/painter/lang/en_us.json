@@ -1,0 +1,13 @@
+{
+  "itemGroup.painter": "Example Mod Tab",
+  "block.painter.example_block": "Example Block",
+  "item.painter.example_item": "Example Item",
+
+  "painter.configuration.title": "Painter Configs",
+  "painter.configuration.section.painter.common.toml": "Painter Configs",
+  "painter.configuration.section.painter.common.toml.title": "Painter Configs",
+  "painter.configuration.items": "Item List",
+  "painter.configuration.logDirtBlock": "Log Dirt Block",
+  "painter.configuration.magicNumberIntroduction": "Magic Number Text",
+  "painter.configuration.magicNumber": "Magic Number"
+}
