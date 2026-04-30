@@ -1,5 +1,4 @@
 {
-  "itemGroup.painter": "Example Mod Tab",
   "block.painter.example_block": "Example Block",
   "item.painter.example_item": "Example Item",
 
@@ -9,5 +8,10 @@
   "painter.configuration.items": "Item List",
   "painter.configuration.logDirtBlock": "Log Dirt Block",
   "painter.configuration.magicNumberIntroduction": "Magic Number Text",
-  "painter.configuration.magicNumber": "Magic Number"
+  "painter.configuration.magicNumber": "Magic Number",
+
+  "itemGroup.painter": "Painting",
+  "block.painter.canvas": "Canvas Block",
+  "item.painter.debug_paintbrush": "Debug Paintbrush",
+  "item.painter.canvas": "Canvas Block"
 }

@@ -1,9 +1,6 @@
 package com.astune.painter;
 
-import com.astune.painter.network.NetworkHandler;
-import com.astune.painter.registry.ModAttachmentTypes;
-import com.astune.painter.registry.ModCreativeTabs;
-import com.astune.painter.registry.ModItems;
+import com.astune.painter.registry.*;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -77,10 +74,11 @@ public class Painter {
         // Register the Deferred Register to the mod event bus so tabs get registered
         CREATIVE_MODE_TABS.register(modEventBus);
 
+        ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
-        ModAttachmentTypes.ATTACHMENT_TYPES.register(modEventBus);
+        ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
+        ModDataComponents.DATA_COMPONENTS.register(modEventBus);
         ModCreativeTabs.CREATIVE_TABS.register(modEventBus);
-        modEventBus.addListener(NetworkHandler::register);
 
         // Register ourselves for server and other game events we are interested in.
         // Note that this is necessary if and only if we want *this* class (Painter) to respond directly to events.
