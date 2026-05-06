@@ -1,72 +1,54 @@
 package com.astune.painter.client;
 
-import com.astune.painter.api.PixelMatrix;
-import com.astune.painter.block.CanvasBlockEntity;
+import com.astune.painter.Painter;
 import com.astune.painter.data.CanvasData;
+import com.astune.painter.api.PixelMatrix;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.ItemOverrides;
-import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.BakedModel;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.client.ChunkRenderTypeSet;
-import net.neoforged.neoforge.client.model.IDynamicBakedModel;
-import net.neoforged.neoforge.client.model.data.ModelData;
-import net.neoforged.neoforge.client.model.data.ModelProperty;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class CanvasBlockBakedModel implements IDynamicBakedModel {
+public class PixelQuadGenerator {
 
-    public static final ModelProperty<CanvasBlockEntity> BE_PROPERTY = new ModelProperty<>();
-    private final BakedModel originalModel;
-    private static final ResourceLocation DOT_TEXTURE =
-            ResourceLocation.fromNamespaceAndPath("painter", "block/dot_white");
+    // 白点纹理，用于像素四边形
+    private static final ResourceLocation DOT_TEXTURE = ResourceLocation.fromNamespaceAndPath(Painter.MODID, "block/pixel_dot");
 
-    public CanvasBlockBakedModel(BakedModel originalModel) {
-        this.originalModel = originalModel;
-    }
-    @Override
-    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side,
-                                    RandomSource rand, ModelData data, @Nullable RenderType renderType) {
+    /**
+     * 生成画布像素四边形
+     * @param canvas 画布数据
+     * @param state  当前方块状态（可选，用于获取属性）
+     * @param side   要渲染的面，为 null 时渲染所有面
+     * @return 指定面的像素四边形列表
+     */
+    public static List<BakedQuad> createQuads(CanvasData canvas, @Nullable BlockState state, @Nullable Direction side) {
         List<BakedQuad> quads = new ArrayList<>();
-        CanvasBlockEntity be = data.get(BE_PROPERTY);
-        if (be == null) return quads;
+        if (canvas == null || canvas.pixels() == null) return quads;
 
-        BlockState mimicked = be.getMimickedState();
-        if (mimicked.isAir()) return quads;
+        Direction face = canvas.face(); // 画布仅绘制在存储的面
+        // 如果传入了 side 且与画布面不符，则不添加任何四边形
+        if (side != null && side != face) return quads;
 
-        BakedModel mimickedModel = Minecraft.getInstance().getBlockRenderer().getBlockModel(mimicked);
-
-        // 添加原方块四边形（包括 renderType == null）
-        List<BakedQuad> originalQuads = mimickedModel.getQuads(mimicked, side, rand, data, renderType);
-        quads.addAll(originalQuads);
-
-        CanvasData canvas = be.getCanvasData();
-        if (canvas != null && side == canvas.face()) {
-            quads.addAll(createPixelQuads(canvas.face(), canvas.pixels()));
-        }
+        // 生成该面所有像素四边形
+        quads.addAll(createPixelQuads(face, (PixelMatrix) canvas.pixels()));
         return quads;
     }
 
-    // 3. 完整 createPixelQuads 方法（负责像素四边形）
-    private List<BakedQuad> createPixelQuads(Direction face, PixelMatrix pixels) {
+    /**
+     * 根据面方向和像素矩阵生成四边形列表（顶点顺序符合逆时针）
+     */
+    private static List<BakedQuad> createPixelQuads(Direction face, PixelMatrix pixels) {
         List<BakedQuad> quads = new ArrayList<>();
         int size = PixelMatrix.SIZE;
         float step = 1.0f / size;
 
-        // 微偏移防止穿插（沿用原逻辑：正方向 +0.005，负方向 -0.005）
+        // 微偏移防止穿插
         float out = 0.005f * (face.getAxisDirection() == Direction.AxisDirection.POSITIVE ? 1 : -1);
 
         TextureAtlasSprite sprite = Minecraft.getInstance()
@@ -93,7 +75,6 @@ public class CanvasBlockBakedModel implements IDynamicBakedModel {
 
                 switch (face) {
                     case DOWN:
-                        // 面法线向下，水平轴为X (x)，垂直轴为Z (y)，深度为Y (1.0，向外微移)
                         quadVertices = new float[][]{
                                 {y1, 1.0f + out, x0}, {y1, 1.0f + out, x1}, {y0, 1.0f + out, x1}, {y0, 1.0f + out, x0}
                         };
@@ -105,7 +86,6 @@ public class CanvasBlockBakedModel implements IDynamicBakedModel {
                         };
                         break;
                     case UP:
-                        // 面法线向上，水平轴为X (x)，垂直轴为Z (y)，深度为Y (0.0，向外微移)
                         quadVertices = new float[][]{
                                 {y0, 0.0f + out, x0}, {y0, 0.0f + out, x1}, {y1, 0.0f + out, x1}, {y1, 0.0f + out, x0}
                         };
@@ -117,7 +97,6 @@ public class CanvasBlockBakedModel implements IDynamicBakedModel {
                         };
                         break;
                     case NORTH:
-                        // 面法线向北，水平轴为X (x)，垂直轴为Y (y)，深度为Z (0.0，向外微移)
                         quadVertices = new float[][]{
                                 {y0, x0, 0.0f + out}, {y0, x1, 0.0f + out}, {y1, x1, 0.0f + out}, {y1, x0, 0.0f + out}
                         };
@@ -129,7 +108,6 @@ public class CanvasBlockBakedModel implements IDynamicBakedModel {
                         };
                         break;
                     case SOUTH:
-                        // 面法线向南，水平轴为X (x)，垂直轴为Y (y)，深度为Z (1.0，向外微移)
                         quadVertices = new float[][]{
                                 {y0, x1, 1.0f + out}, {y0, x0, 1.0f + out}, {y1, x0, 1.0f + out}, {y1, x1, 1.0f + out}
                         };
@@ -141,7 +119,6 @@ public class CanvasBlockBakedModel implements IDynamicBakedModel {
                         };
                         break;
                     case WEST:
-                        // 面法线向西，水平轴为Z (x)，垂直轴为Y (y)，深度为X (0.0，向外微移)
                         quadVertices = new float[][]{
                                 {0.0f + out, y0, x0}, {0.0f + out, y0, x1}, {0.0f + out, y1, x1}, {0.0f + out, y1, x0}
                         };
@@ -153,7 +130,6 @@ public class CanvasBlockBakedModel implements IDynamicBakedModel {
                         };
                         break;
                     case EAST:
-                        // 面法线向东，水平轴为Z (x)，垂直轴为Y (y)，深度为X (1.0，向外微移)
                         quadVertices = new float[][]{
                                 {1.0f + out, y0, x1}, {1.0f + out, y0, x0}, {1.0f + out, y1, x0}, {1.0f + out, y1, x1}
                         };
@@ -187,49 +163,11 @@ public class CanvasBlockBakedModel implements IDynamicBakedModel {
         return quads;
     }
 
-
-    private int colorToInt(float r, float g, float b, float a) {
-        int red = (int)(r * 255) & 0xFF;
-        int green = (int)(g * 255) & 0xFF;
-        int blue = (int)(b * 255) & 0xFF;
-        int alpha = (int)(a * 255) & 0xFF;
-        return (alpha << 24) | (red << 16) | (green << 8) | blue;
+    private static int colorToInt(float r, float g, float b, float a) {
+        int ri = (int)(r * 255) & 0xFF;
+        int gi = (int)(g * 255) & 0xFF;
+        int bi = (int)(b * 255) & 0xFF;
+        int ai = (int)(a * 255) & 0xFF;
+        return (ai << 24) | (ri << 16) | (gi << 8) | bi;
     }
-
-    @Override
-    public ChunkRenderTypeSet getRenderTypes(BlockState state, RandomSource rand, ModelData data) {
-        List<RenderType> types = new ArrayList<>();
-        // 获取原方块的 RenderTypes
-        CanvasBlockEntity be = data.get(BE_PROPERTY);
-        if (be != null) {
-            BakedModel mimickedModel = Minecraft.getInstance().getBlockRenderer()
-                    .getBlockModel(be.getMimickedState());
-            types.addAll(mimickedModel.getRenderTypes(be.getMimickedState(), rand, ModelData.EMPTY).asList());
-        }
-        if (be != null && be.getCanvasData() != null) {
-            types.add(RenderType.translucent());
-        }
-
-        if (types.isEmpty()) {
-            types.add(RenderType.solid());
-        }
-
-        return ChunkRenderTypeSet.of(types);
-    }
-
-    // 以下委托给原始模型
-    @Override
-    public boolean useAmbientOcclusion() { return true; }
-    @Override
-    public boolean isGui3d() { return originalModel.isGui3d(); }
-    @Override
-    public boolean usesBlockLight() { return true; }
-    @Override
-    public boolean isCustomRenderer() { return false; }
-    @Override
-    public TextureAtlasSprite getParticleIcon() { return originalModel.getParticleIcon(); }
-    @Override
-    public ItemOverrides getOverrides() { return ItemOverrides.EMPTY; }
-    @Override
-    public ItemTransforms getTransforms() { return originalModel.getTransforms(); }
 }

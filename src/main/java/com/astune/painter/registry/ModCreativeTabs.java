@@ -15,7 +15,6 @@ public class ModCreativeTabs {
                     .icon(() -> new ItemStack(ModItems.PAINTBRUSH.get()))
                     .displayItems((params, output) -> {
                         output.accept(ModItems.PAINTBRUSH.get());
-                        output.accept(ModItems.CANVAS.get());
                     })
                     .build()
     );

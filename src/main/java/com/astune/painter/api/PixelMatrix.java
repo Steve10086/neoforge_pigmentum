@@ -2,6 +2,7 @@ package com.astune.painter.api;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 
@@ -38,4 +39,20 @@ public class PixelMatrix implements IPixelMatrix {
             (buf, m) -> buf.writeVarIntArray(m.colors),
             buf -> new PixelMatrix(buf.readVarIntArray())
     );
+
+    @Override
+    public CompoundTag toNbt() {
+        CompoundTag tag = new CompoundTag();
+        tag.putIntArray("data", this.colors); // 假设内部是 int[] pixels
+        return tag;
+    }
+
+    public static PixelMatrix fromNbt(CompoundTag tag) {
+        int[] data = tag.getIntArray("data");
+        PixelMatrix matrix = new PixelMatrix();
+        if (data.length == SIZE * SIZE) {
+            System.arraycopy(data, 0, matrix.colors, 0, data.length);
+        }
+        return matrix;
+    }
 }

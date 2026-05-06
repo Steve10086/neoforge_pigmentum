@@ -14,4 +14,5 @@ public interface IPixelMatrix {
     void setColor(int x, int y, int color);
     int[] getRaw();
     void fill(int color);
+    CompoundTag toNbt();
 }
