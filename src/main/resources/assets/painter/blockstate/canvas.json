@@ -1,5 +1,7 @@
 {
   "variants": {
-    "": { "model": "painter:block/canvas" }
+    "": {
+      "model": "painter:block/canvas"
+    }
   }
 }

@@ -3,9 +3,10 @@
   "package": "com.astune.painter.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "BlockBehaviourMixin",
-
-    "LevelChunkMixin"
+    "BlockEntityMixin",
+    "BlockStateBaseMixin",
+    "PistonBaseBlockMixin",
+    "PistonStructureResolverMixin"
   ],
   "injectors": {
     "defaultRequire": 1

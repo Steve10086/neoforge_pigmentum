@@ -1,5 +1,8 @@
 package com.astune.painter;
 
+import com.astune.painter.attachment.ModAttachments;
+import com.astune.painter.client.CanvasRenderEventHandler;
+import com.astune.painter.network.SyncCanvasPacket;
 import com.astune.painter.registry.*;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -25,11 +28,15 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
+
+import static net.neoforged.fml.loading.FMLEnvironment.dist;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(Painter.MODID)
@@ -79,7 +86,7 @@ public class Painter {
         ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
-        ModDataComponents.DATA_COMPONENTS.register(modEventBus);
+        ModDataComponents.DATA_COMPONENT_TYPES.register(modEventBus);
         ModCreativeTabs.CREATIVE_TABS.register(modEventBus);
         // Register ourselves for server and other game events we are interested in.
         // Note that this is necessary if and only if we want *this* class (Painter) to respond directly to events.
@@ -88,9 +95,23 @@ public class Painter {
 
         // Register the item to a creative tab
         modEventBus.addListener(this::addCreative);
+        if (dist.isClient()) {
+            // 注册到 NeoForge 事件总线（Forge 总线）
+            NeoForge.EVENT_BUS.addListener(CanvasRenderEventHandler::onAddGeometry);
+        }
+        modEventBus.addListener(this::registerPayloadHandlers);
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+    }
+
+    private void registerPayloadHandlers(final RegisterPayloadHandlersEvent event) {
+        final PayloadRegistrar registrar = event.registrar(MODID);
+        registrar.playToClient(
+                SyncCanvasPacket.TYPE,
+                SyncCanvasPacket.STREAM_CODEC,
+                SyncCanvasPacket::handle
+        );
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

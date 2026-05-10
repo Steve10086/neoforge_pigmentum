@@ -2,57 +2,121 @@ package com.astune.painter.api;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 
 import java.util.Arrays;
+import java.util.stream.IntStream;
 
-public class PixelMatrix implements IPixelMatrix {
-    private final int[] colors = new int[TOTAL];
+/**
+ * 可变尺寸的像素矩阵，每个像素代表 1/16 方块单位的正方形。
+ */
+public class PixelMatrix implements IPixelMatrix{
 
+    private final int width;   // 水平方向像素数
+    private final int height;  // 垂直方向像素数
+    private final int[] pixels; // ARGB，行优先
+
+    public PixelMatrix(int width, int height) {
+        this.width = Math.max(1, width);
+        this.height = Math.max(1, height);
+        this.pixels = new int[this.width * this.height];
+        Arrays.fill(pixels, 0x00000000); // 透明
+    }
+
+    // 默认 16×16 构造
     public PixelMatrix() {
-        fill(0x00000000);
+        this(16, 16);
     }
-
-    // 用于 Codec 的构造器
-    public PixelMatrix(int[] raw) {
-        System.arraycopy(raw, 0, colors, 0, Math.min(raw.length, TOTAL));
-    }
-
-    @Override public int getColor(int x, int y) { return colors[y * SIZE + x]; }
-    @Override public void setColor(int x, int y, int color) { colors[y * SIZE + x] = color; }
-    @Override public int[] getRaw() { return colors; }
-    @Override public void fill(int color) { Arrays.fill(colors, color); }
-
-    // -- 序列化支持 --
-    public static final Codec<PixelMatrix> CODEC = RecordCodecBuilder.create(instance ->
-            instance.group(
-                    Codec.INT_STREAM.xmap(
-                            stream -> stream.toArray(),
-                            Arrays::stream
-                    ).fieldOf("colors").forGetter(m -> Arrays.copyOf(m.colors, TOTAL))
-            ).apply(instance, PixelMatrix::new)
-    );
-
-    public static final StreamCodec<RegistryFriendlyByteBuf, PixelMatrix> STREAM_CODEC = StreamCodec.of(
-            (buf, m) -> buf.writeVarIntArray(m.colors),
-            buf -> new PixelMatrix(buf.readVarIntArray())
-    );
 
     @Override
-    public CompoundTag toNbt() {
-        CompoundTag tag = new CompoundTag();
-        tag.putIntArray("data", this.colors); // 假设内部是 int[] pixels
-        return tag;
+    public IPixelMatrix copy() {
+        return null;
     }
 
-    public static PixelMatrix fromNbt(CompoundTag tag) {
-        int[] data = tag.getIntArray("data");
-        PixelMatrix matrix = new PixelMatrix();
-        if (data.length == SIZE * SIZE) {
-            System.arraycopy(data, 0, matrix.colors, 0, data.length);
-        }
-        return matrix;
+    @Override
+    public int getWidth() { return width; }
+
+    @Override
+    public int getHeight() { return height; }
+
+    @Override
+    public int getPixel(int x, int y) {
+        if (x < 0 || x >= width || y < 0 || y >= height) return 0;
+        return pixels[y * width + x];
     }
+
+    @Override
+    public void setPixel(int x, int y, int color) {
+        if (x < 0 || x >= width || y < 0 || y >= height) return;
+        pixels[y * width + x] = color;
+    }
+
+    @Override
+    public void fill(int color) {
+        Arrays.fill(pixels, color);
+    }
+
+    @Override
+    public int[] getPixels() {
+        return pixels;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        for (int p : pixels) {
+            if (p != 0) return false;
+        }
+        return true;
+    }
+    public void fillWhite() {
+        fill(0xFFFFFFFF);
+    }
+
+    // 全白 16×16 静态方法（兼容旧测试）
+    public static PixelMatrix fullWhite() {
+        PixelMatrix m = new PixelMatrix(16, 16);
+        m.fill(0xFFFFFFFF);
+        return m;
+    }
+
+    // 序列化：宽、高、像素数据
+    public static final Codec<PixelMatrix> CODEC = RecordCodecBuilder.create(instance ->
+            instance.group(
+                    Codec.INT.fieldOf("width").forGetter(PixelMatrix::getWidth),
+                    Codec.INT.fieldOf("height").forGetter(PixelMatrix::getHeight),
+                    Codec.list(Codec.INT).fieldOf("pixels").forGetter(
+                            m -> Arrays.stream(m.pixels).boxed().toList()
+                    )
+            ).apply(instance, (w, h, p) -> {
+                PixelMatrix m = new PixelMatrix(w, h);
+                for (int i = 0; i < Math.min(p.size(), w * h); i++) {
+                    m.pixels[i] = p.get(i);
+                }
+                return m;
+            })
+    );
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, PixelMatrix> STREAM_CODEC =
+            new StreamCodec<>() {
+                @Override
+                public PixelMatrix decode(RegistryFriendlyByteBuf buf) {
+                    int w = buf.readVarInt();
+                    int h = buf.readVarInt();
+                    PixelMatrix m = new PixelMatrix(w, h);
+                    for (int i = 0; i < w * h; i++) {
+                        m.pixels[i] = buf.readInt();
+                    }
+                    return m;
+                }
+
+                @Override
+                public void encode(RegistryFriendlyByteBuf buf, PixelMatrix matrix) {
+                    buf.writeVarInt(matrix.width);
+                    buf.writeVarInt(matrix.height);
+                    for (int pixel : matrix.pixels) {
+                        buf.writeInt(pixel);
+                    }
+                }
+            };
 }
