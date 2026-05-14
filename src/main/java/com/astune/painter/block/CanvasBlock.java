@@ -1,6 +1,7 @@
 package com.astune.painter.block;
 
 import com.astune.painter.network.CanvasPistonDataCache;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -14,10 +15,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.level.PistonEvent;
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.server.level.ServerLevel;
+import com.astune.painter.client.CanvasBlockClientExtensions;
 
 import java.util.List;
 

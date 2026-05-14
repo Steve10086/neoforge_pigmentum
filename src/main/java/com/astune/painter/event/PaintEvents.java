@@ -57,10 +57,12 @@ public class PaintEvents {
 
         // 情况1：方块已有实体（原始实体或已是 CanvasBlockEntity）
         if (be instanceof CanvasDataHolder holder) {
+            System.out.println("[paintEvent] adding paint");
             CanvasData canvas = holder.painter$getCanvasData();
             if (canvas == null) canvas = CanvasData.empty();
             canvas.setFace(newFace);                // 添加或替换
             holder.painter$setCanvasData(canvas);
+            holder.painter$regenerateTextures(canvas);
             be.setChanged();
 
             // 同步网络包

@@ -1,12 +1,15 @@
 package com.astune.painter.network;
 
 import com.astune.painter.api.CanvasData;
+import com.astune.painter.api.CanvasDataHolder;
+import com.astune.painter.block.CanvasBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -43,6 +46,12 @@ public record SyncCanvasPacket(BlockPos pos, CanvasData canvasData, Optional<Blo
                     state -> ClientCanvasCache.putMimickedState(packet.pos, state),
                     () -> ClientCanvasCache.removeMimickedState(packet.pos)
             );
+            // update canvas cache
+            BlockEntity be = ctx.player().level().getBlockEntity(packet.pos);
+            if(be instanceof CanvasDataHolder cBe) {
+                cBe.painter$setCanvasData(packet.canvasData);
+                cBe.painter$regenerateTextures(packet.canvasData);
+            }
             // 强制客户端重绘
             if (ctx.player() != null && ctx.player().level() != null) {
                 var level = ctx.player().level();

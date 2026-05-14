@@ -34,6 +34,10 @@ public record CanvasData(List<CanvasFace> faces) {
                     }
             );
 
+    public CanvasData(List<CanvasFace> faces) {
+        this.faces = new ArrayList<>(faces);
+    }
+
     public static CanvasData empty() {
         return new CanvasData(new ArrayList<>());
     }
