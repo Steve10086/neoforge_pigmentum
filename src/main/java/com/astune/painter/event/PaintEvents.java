@@ -9,9 +9,8 @@ import com.astune.painter.block.CanvasBlockEntity;
 import com.astune.painter.item.DebugPaintbrush;
 import com.astune.painter.network.SyncCanvasPacket;
 import com.astune.painter.registry.ModBlocks;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.datafixers.util.Pair;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.resources.model.BakedModel;
@@ -49,34 +48,58 @@ public class PaintEvents {
         Level level = event.getLevel();
         Player player = event.getEntity();
         BlockPos pos = event.getHitVec().getBlockPos();
+        BlockEntity be = level.getBlockEntity(pos);
         BlockState state = level.getBlockState(pos);
         Direction face = event.getFace();
         Vec3 hitLoc = event.getHitVec().getLocation();
 
         if (level.isClientSide) return;
 
-        // 计算点击表面对应的画布面
-        CanvasFace newFace = calculateCanvasFace(level, pos, state, hitLoc, face, player);
-        if (newFace == null) return;
+        // 1. 生成或获取 CanvasData 并定位要编辑的 CanvasFace
+        Pair<CanvasData, CanvasFace> result = getOrCreateCanvasFace(level, pos, state, hitLoc, face);
+        CanvasData canvas = null;
+        if (result != null) {
+            canvas = result.getFirst();
+        }
+        if (canvas == null) return;
 
-        // 当前仅测试：面设为全白
-        newFace.pixels().fillWhite();  // 假设 PixelMatrix 有 fillWhite()
+        // 2. 找到与点击面对应的 CanvasFace 实例
+        CanvasFace targetFace = result.getSecond();
+        if (targetFace == null || targetFace.pixels() == null) return;
 
+        // 3. 计算被点击的具体像素坐标
+        Vec3 localHit = hitLoc.subtract(pos.getX(), pos.getY(), pos.getZ());
+        int pixelX = calculatePixel(localHit, face, targetFace.pixels().getWidth(), true);
+        int pixelY = calculatePixel(localHit, face, targetFace.pixels().getHeight(), false);
+
+        if (pixelX == -1 || pixelY == -1) return;
+
+        // 4. 在该像素上“绘制” (当前示例为填充白色)
+        targetFace.pixels().setPixel(pixelX, pixelY, 0xFFFFFFFF); // ARGB White
+
+        if (be instanceof CanvasDataHolder holder) {
+            holder.painter$regenerateTextures(canvas);
+            be.setChanged();
+        }
+
+        // 5. 同步更新到客户端
+        syncCanvas(level, pos, canvas, state);
+    }
+
+    @Nullable
+    private static Pair<CanvasData, CanvasFace> getOrCreateCanvasFace(Level level, BlockPos pos, BlockState state, Vec3 hitLoc, Direction face) {
         BlockEntity be = level.getBlockEntity(pos);
+        CanvasFace newFace = calculateCanvasFace(level, pos, state, hitLoc, face);
+        if (newFace == null) return null;
+        CanvasData canvas = null;
 
         // 情况1：方块已有实体（原始实体或已是 CanvasBlockEntity）
         if (be instanceof CanvasDataHolder holder) {
-            System.out.println("[paintEvent] adding paint");
-            CanvasData canvas = holder.painter$getCanvasData();
+            canvas = holder.painter$getCanvasData();
             if (canvas == null) canvas = CanvasData.empty();
-            canvas.setFace(newFace);                // 添加或替换
+            System.out.println("[paintEvent] adding paint to canvasdata " + canvas.faces());
+            newFace = canvas.addOrGetFace(newFace);                // 添加或替换
             holder.painter$setCanvasData(canvas);
-            holder.painter$regenerateTextures(canvas);
-            be.setChanged();
-
-            // 同步网络包
-            BlockState mimicked = (be instanceof CanvasBlockEntity canvasBE) ? canvasBE.getMimickedState() : null;
-            syncCanvas(level, pos, canvas, mimicked);
         }
         // 情况2：无实体方块 → 替换为 CanvasBlock
         else {
@@ -89,17 +112,156 @@ public class PaintEvents {
             BlockEntity newBe = level.getBlockEntity(pos);
             if (newBe instanceof CanvasBlockEntity canvasBE) {
                 canvasBE.setMimickedState(originalState);
-                CanvasData canvas = CanvasData.empty();
+                canvas = CanvasData.empty();
                 if (newBe instanceof CanvasDataHolder holder) holder.painter$setCanvasData(canvas);
-                canvas.setFace(newFace);
-                canvasBE.setChanged();
-                syncCanvas(level, pos, canvas, originalState);
+                canvas.addOrGetFace(newFace);
             }
         }
+        return new Pair<>(canvas, newFace);
+    }
+
+    /**
+     * 根据命中点位置、面方向和像素网格尺寸计算被击中的像素索引。
+     * @param localHit 相对于方块角点的命中坐标 (0.0 to 1.0)
+     * @param face 被点击的面方向
+     * @param totalPixels 该方向的总像素数
+     * @param isX true 计算 X/U 坐标，false 计算 Y/V 坐标
+     * @return 像素索引 (0-based)
+     */
+    private static int calculatePixel(Vec3 localHit, Direction face, int totalPixels, boolean isX) {
+        double u = 0, v = 0;
+        switch (face) {
+            case NORTH: u = 1.0 - localHit.x(); v = localHit.y(); break;
+            case SOUTH: u = localHit.x();       v = localHit.y(); break;
+            case WEST:  u = 1.0 - localHit.z(); v = localHit.y(); break;
+            case EAST:  u = localHit.z();       v = localHit.y(); break;
+            case UP:    u = localHit.x();       v = localHit.z(); break;
+            case DOWN:  u = localHit.x();       v = 1.0 - localHit.z(); break;
+        }
+
+        double coordinate = isX ? u : v;
+        int pixelIndex = (int)(coordinate * totalPixels);
+
+        // 检查是否出界，出界返回 -1
+        if (pixelIndex < 0 || pixelIndex >= totalPixels) {
+            return -1;
+        }
+        return pixelIndex;
+    }
+
+    /**
+     * 根据命中点和方块形状，计算出被点击表面的 CanvasFace 描述。
+     *
+     * @param level  世界
+     * @param pos    方块坐标
+     * @param state  方块状态
+     * @param hitLoc 击中点世界坐标
+     * @param face   点击的大致面方向
+     * @return 画布面，如果无法确定则返回 null
+     */
+    @Nullable
+    private static CanvasFace calculateCanvasFace(Level level, BlockPos pos, BlockState state,
+                                                  Vec3 hitLoc, Direction face) {
+        VoxelShape shape = state.getShape(level, pos);
+        if (shape.isEmpty()) return null;
+
+        double localX = hitLoc.x - pos.getX();
+        double localY = hitLoc.y - pos.getY();
+        double localZ = hitLoc.z - pos.getZ();
+
+        for (AABB aabb : shape.toAabbs()) {
+            switch (face) {
+                case UP:
+                    if (Math.abs(aabb.maxY - localY) < 0.001) {
+                        double width = (aabb.maxX - aabb.minX);
+                        double height = (aabb.maxZ - aabb.minZ);
+                        int pixelW = Math.max(1, (int)(width * 16.0 + 0.5));
+                        int pixelH = Math.max(1, (int)(height * 16.0 + 0.5));
+                        Vec3 offset = new Vec3(
+                                aabb.getCenter().x - 0.5,
+                                aabb.maxY - 0.5,
+                                aabb.getCenter().z - 0.5
+                        );
+                        return new CanvasFace(face, offset, new PixelMatrix(pixelW, pixelH));
+                    }
+                    break;
+                case DOWN:
+                    if (Math.abs(aabb.minY - localY) < 0.001) {
+                        double width = (aabb.maxX - aabb.minX);
+                        double height = (aabb.maxZ - aabb.minZ);
+                        int pixelW = Math.max(1, (int)(width * 16.0 + 0.5));
+                        int pixelH = Math.max(1, (int)(height * 16.0 + 0.5));
+                        Vec3 offset = new Vec3(
+                                aabb.getCenter().x - 0.5,
+                                aabb.minY - 0.5,
+                                aabb.getCenter().z - 0.5
+                        );
+                        return new CanvasFace(face, offset, new PixelMatrix(pixelW, pixelH));
+                    }
+                    break;
+                case NORTH:
+                    if (Math.abs(aabb.minZ - localZ) < 0.001) {
+                        double width = (aabb.maxX - aabb.minX);
+                        double height = (aabb.maxY - aabb.minY);
+                        int pixelW = Math.max(1, (int)(width * 16.0 + 0.5));
+                        int pixelH = Math.max(1, (int)(height * 16.0 + 0.5));
+                        Vec3 offset = new Vec3(
+                                aabb.getCenter().x - 0.5,
+                                aabb.getCenter().y - 0.5,
+                                aabb.minZ - 0.5
+                        );
+                        return new CanvasFace(face, offset, new PixelMatrix(pixelW, pixelH));
+                    }
+                    break;
+                case SOUTH:
+                    if (Math.abs(aabb.maxZ - localZ) < 0.001) {
+                        double width = (aabb.maxX - aabb.minX);
+                        double height = (aabb.maxY - aabb.minY);
+                        int pixelW = Math.max(1, (int)(width * 16.0 + 0.5));
+                        int pixelH = Math.max(1, (int)(height * 16.0 + 0.5));
+                        Vec3 offset = new Vec3(
+                                aabb.getCenter().x - 0.5,
+                                aabb.getCenter().y - 0.5,
+                                aabb.maxZ - 0.5
+                        );
+                        return new CanvasFace(face, offset, new PixelMatrix(pixelW, pixelH));
+                    }
+                    break;
+                case WEST:
+                    if (Math.abs(aabb.minX - localX) < 0.001) {
+                        double width = (aabb.maxZ - aabb.minZ);
+                        double height = (aabb.maxY - aabb.minY);
+                        int pixelW = Math.max(1, (int)(width * 16.0 + 0.5));
+                        int pixelH = Math.max(1, (int)(height * 16.0 + 0.5));
+                        Vec3 offset = new Vec3(
+                                aabb.minX - 0.5,
+                                aabb.getCenter().y - 0.5,
+                                aabb.getCenter().z - 0.5
+                        );
+                        return new CanvasFace(face, offset, new PixelMatrix(pixelW, pixelH));
+                    }
+                    break;
+                case EAST:
+                    if (Math.abs(aabb.maxX - localX) < 0.001) {
+                        double width = (aabb.maxZ - aabb.minZ);
+                        double height = (aabb.maxY - aabb.minY);
+                        int pixelW = Math.max(1, (int)(width * 16.0 + 0.5));
+                        int pixelH = Math.max(1, (int)(height * 16.0 + 0.5));
+                        Vec3 offset = new Vec3(
+                                aabb.maxX - 0.5,
+                                aabb.getCenter().y - 0.5,
+                                aabb.getCenter().z - 0.5
+                        );
+                        return new CanvasFace(face, offset, new PixelMatrix(pixelW, pixelH));
+                    }
+                    break;
+            }
+        }
+        return null;
     }
 
     @Nullable
-    private static CanvasFace calculateCanvasFace(Level level, BlockPos pos, BlockState state,
+    private static CanvasFace calculateCanvasFaceFromBakedModel(Level level, BlockPos pos, BlockState state,
                                                   Vec3 hitLoc, Direction face, Player player) {
         // 1. 获取客户端资源 (在服务端直接获取可能受限，但 Minecraft 类在集成环境服务端也可用)
         Minecraft mc = Minecraft.getInstance();

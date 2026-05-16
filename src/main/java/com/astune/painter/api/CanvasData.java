@@ -3,7 +3,6 @@ package com.astune.painter.api;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Direction;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.phys.Vec3;
 
@@ -44,15 +43,17 @@ public record CanvasData(List<CanvasFace> faces) {
 
     /**
      * 添加或替换一个画布面（如果相同表面已存在则替换）。
+     *
+     * @return
      */
-    public void setFace(CanvasFace newFace) {
+    public CanvasFace addOrGetFace(CanvasFace newFace) {
         for (int i = 0; i < faces.size(); i++) {
             if (faces.get(i).isSameSurface(newFace)) {
-                faces.set(i, newFace);
-                return;
+                return faces.get(i);
             }
         }
         faces.add(newFace);
+        return newFace;
     }
 
     /**

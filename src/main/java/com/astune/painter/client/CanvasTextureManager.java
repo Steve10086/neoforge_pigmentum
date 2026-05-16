@@ -3,71 +3,105 @@ package com.astune.painter.client;
 import com.astune.painter.api.CanvasFace;
 import com.astune.painter.api.PixelMatrix;
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 
+import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CanvasTextureManager {
-    private static final Map<ResourceLocation, DynamicTexture> TEXTURES = new ConcurrentHashMap<>();
+    // 键: "entityId_directionName", 值: 当前有效的 ResourceLocation
+    private static final Map<String, ResourceLocation> ACTIVE = new ConcurrentHashMap<>();
+    private static long COUNTER = 0;
 
     /**
-     * 为一个 CanvasFace 生成（或获取）动态纹理。
-     * 纹理标识由 pos 和方向唯一确定，更新时先释放旧纹理再生成新纹理。
+     * 生成或更新指定实体某个方向的画布纹理。
+     * @param entityId 客户端侧 CanvasBlockEntity 的唯一 ID
+     * @return 新纹理的 ResourceLocation，失败返回 null
      */
-    public static ResourceLocation getOrUpdateTexture(CanvasFace face, BlockPos pos) {
-        ResourceLocation id = textureId(pos, face.primaryFace());
+    public static ResourceLocation getOrUpdateTexture(CanvasFace face, int entityId, int faceIndex) {
+        String key = key(entityId, faceIndex);
 
-        // 如果已存在则先释放旧纹理
-        DynamicTexture old = TEXTURES.remove(id);
-        if (old != null) {
-            Minecraft.getInstance().getTextureManager().release(id);
-        }
+        NativeImage image = createNativeImage(face);
+        if (image == null) return null;
 
-        // 生成新纹理
-        PixelMatrix matrix = face.pixels();
-        int w = matrix.getWidth();
-        int h = matrix.getHeight();
-        NativeImage image = new NativeImage(w, h, false);
-
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                int argb = matrix.getPixel(x, y);
-                int a = (argb >> 24) & 0xFF;
-                int r = (argb >> 16) & 0xFF;
-                int g = (argb >> 8) & 0xFF;
-                int b = argb & 0xFF;
-                // NativeImage 使用 ABGR 顺序
-                int abgr = (a << 24) | (b << 16) | (g << 8) | r;
-                image.setPixelRGBA(x, y, abgr);
-            }
-        }
+        long id = COUNTER++;
+        ResourceLocation newLoc = ResourceLocation.fromNamespaceAndPath("painter",
+                "canvas/" + entityId + "_" + faceIndex + "_" + id);
 
         DynamicTexture dynTex = new DynamicTexture(image);
-        Minecraft.getInstance().getTextureManager().register(id, dynTex);
-        TEXTURES.put(id, dynTex);
-        return id;
+        Minecraft.getInstance().getTextureManager().register(newLoc, dynTex);
+
+        ResourceLocation oldLoc = ACTIVE.put(key, newLoc);
+        if (oldLoc != null) {
+            RenderSystem.recordRenderCall(() -> {
+                Minecraft.getInstance().getTextureManager().release(oldLoc);
+            });
+        }
+        return newLoc;
     }
 
-    /**
-     * 释放与某个 BlockPos 相关联的所有面的纹理（方块被移除时调用）。
-     */
-    public static void releaseTextures(BlockPos pos) {
-        for (Direction dir : Direction.values()) {
-            ResourceLocation id = textureId(pos, dir);
-            DynamicTexture tex = TEXTURES.remove(id);
-            if (tex != null) {
-                Minecraft.getInstance().getTextureManager().release(id);
-            }
+    /** 释放指定实体的某个面 */
+    public static void releaseTexture(int entityId, int faceIndex) {
+        String key = key(entityId, faceIndex);
+        ResourceLocation loc = ACTIVE.remove(key);
+        if (loc != null) {
+            RenderSystem.recordRenderCall(() -> {
+                Minecraft.getInstance().getTextureManager().release(loc);
+            });
         }
     }
 
-    private static ResourceLocation textureId(BlockPos pos, Direction dir) {
-        return ResourceLocation.fromNamespaceAndPath("painter",
-                "canvas/" + pos.getX() + "_" + pos.getY() + "_" + pos.getZ() + "_" + dir.getName());
+    /** 释放指定实体所有面 */
+    public static void releaseTextures(int entityId) {
+        ACTIVE.entrySet().removeIf(entry -> {
+            if (entry.getKey().startsWith(entityId + "_")) {
+                RenderSystem.recordRenderCall(() -> {
+                    Minecraft.getInstance().getTextureManager().release(entry.getValue());
+                });
+                return true;
+            }
+            return false;
+        });
+    }
+
+    private static String key(int entityId, int faceIndex) {
+        return entityId + "_" + faceIndex;
+    }
+
+    private static NativeImage createNativeImage(CanvasFace face) {
+        PixelMatrix matrix = face.pixels();
+        if (matrix == null || matrix.getWidth() <= 0 || matrix.getHeight() <= 0) return null;
+        int w = matrix.getWidth(), h = matrix.getHeight();
+        NativeImage image = null;
+        try {
+            image = new NativeImage(w, h, false);
+            image.getPixelRGBA(0, 0); // 触发分配检查
+        } catch (Exception e) {
+            if (image != null) image.close();
+            return null;
+        }
+
+        try {
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    int argb = matrix.getPixel(x, y);
+                    int a = (argb >> 24) & 0xFF;
+                    int r = (argb >> 16) & 0xFF;
+                    int g = (argb >> 8) & 0xFF;
+                    int b = argb & 0xFF;
+                    image.setPixelRGBA(x, y, (a << 24) | (b << 16) | (g << 8) | r);
+                }
+            }
+        } catch (Exception e) {
+            image.close();
+            return null;
+        }
+        return image;
     }
 }

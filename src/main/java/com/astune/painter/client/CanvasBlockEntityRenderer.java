@@ -2,8 +2,10 @@ package com.astune.painter.client;
 
 import com.astune.painter.api.CanvasData;
 import com.astune.painter.api.CanvasDataHolder;
+import com.astune.painter.api.CanvasFace;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.datafixers.util.Pair;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -12,6 +14,9 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 import java.util.Map;
 
 public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntity> {
@@ -23,7 +28,7 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
     @Override
     public void render(BlockEntity be, float partialTick, PoseStack poseStack,
                        MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
-        Map<Direction, ResourceLocation> textures = null;
+        @Nullable List<Pair<CanvasFace, ResourceLocation>> textures = null;
         CanvasData canvas = null;
 
         if (be instanceof CanvasDataHolder holder) {
@@ -33,19 +38,18 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
         }
         if (canvas == null) return;
 
-        System.out.println("rendering canvas <" + be.getBlockState().getBlock().getName() +  "> at " + be.getBlockPos());
+        //System.out.println("rendering canvas <" + textures +  "> at " + be.getBlockPos());
 
 
         poseStack.pushPose();
         poseStack.translate(0.5, 0.5, 0.5); // 方块中心
 
-        for (var entry : textures.entrySet()) {
-            Direction dir = entry.getKey();
-            ResourceLocation tex = entry.getValue();
-            var faceOpt = canvas.faces().stream().filter(f -> f.primaryFace() == dir).findFirst();
-            if (faceOpt.isEmpty()) continue;
-            var face = faceOpt.get();
+        for (var pair : textures) {
+            CanvasFace face = pair.getFirst();
+            ResourceLocation tex = pair.getSecond();
+            if (tex == null) continue;
 
+            Direction dir = face.primaryFace();
             Vec3[] corners = face.cornerWithOffset();
 
 

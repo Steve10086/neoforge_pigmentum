@@ -5,7 +5,7 @@ import com.astune.painter.api.CanvasDataHolder;
 import com.astune.painter.api.CanvasFace;
 import com.astune.painter.client.CanvasTextureManager;
 import com.astune.painter.network.ClientCanvasCache;
-import net.minecraft.core.Direction;
+import com.mojang.datafixers.util.Pair;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
@@ -18,18 +18,24 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 @Mixin(BlockEntity.class)
 public abstract class BlockEntityMixin implements CanvasDataHolder {
+
+    @Unique
+    private int painter$clientTextureId = -1;
+
+    @Unique
+    private static int NEXT_TEXTURE_ID = 0;
 
     @Unique
     @Nullable
     private CanvasData painter$canvasData;
     @Unique
     @Nullable
-    private Map<Direction, ResourceLocation> painter$cachedFaceTextures;
+    private List<Pair<CanvasFace, ResourceLocation>> painter$cachedFaceTextures;
     @Override
     @Nullable
     public CanvasData painter$getCanvasData() {
@@ -59,7 +65,20 @@ public abstract class BlockEntityMixin implements CanvasDataHolder {
             BlockEntity self = (BlockEntity) (Object) this;
             if (self.getLevel() != null && self.getLevel().isClientSide && painter$canvasData != null) {
                 System.out.println("[Mixin] canvasData after load: " + (painter$canvasData != null));
+                if (painter$clientTextureId == -1) {
+                    painter$clientTextureId = NEXT_TEXTURE_ID++;
+                }
                 painter$regenerateTextures(painter$canvasData);
+            }
+        }
+    }
+
+    @Inject(method = "onLoad", at = @At("HEAD"))
+    private void onLoad(CallbackInfo ci) {
+        BlockEntity self = (BlockEntity) (Object) this;
+        if (self.getLevel() != null && self.getLevel().isClientSide) {
+            if (painter$clientTextureId == -1) {
+                painter$clientTextureId = NEXT_TEXTURE_ID++;
             }
         }
     }
@@ -70,44 +89,45 @@ public abstract class BlockEntityMixin implements CanvasDataHolder {
         if (self.getLevel() != null && self.getLevel().isClientSide) {
             painter$releaseTextures();
             painter$cachedFaceTextures = null;
+            painter$clientTextureId = -1;
             ClientCanvasCache.removeCanvas(self.getBlockPos());
             ClientCanvasCache.removeMimickedState(self.getBlockPos());
         }
     }
 
     @Override
-    public Map<Direction, ResourceLocation> painter$getCachedFaceTextures() {
+    public List<Pair<CanvasFace, ResourceLocation>> painter$getCachedFaceTextures() {
         return painter$cachedFaceTextures;
     }
 
     @Override
     public void painter$regenerateTextures(CanvasData data) {
         if (data == null) {
-            painter$releaseTextures();
+            CanvasTextureManager.releaseTextures(painter$clientTextureId);
             this.painter$cachedFaceTextures = null;
             return;
         }
-        Map<Direction, ResourceLocation> newMap = new HashMap<>();
-        BlockEntity self = (BlockEntity) (Object) this;
+
+        // 释放旧的所有面纹理
+        painter$releaseTextures();
+
+        List<Pair<CanvasFace, ResourceLocation>> newList = new ArrayList<>();
+        int faceIndex = 0;
         for (CanvasFace face : data.faces()) {
-            ResourceLocation tex = CanvasTextureManager.getOrUpdateTexture(face, self.getBlockPos());
-            newMap.put(face.primaryFace(), tex);
-        }
-        if (painter$cachedFaceTextures != null) {
-            for (Map.Entry<Direction, ResourceLocation> old : painter$cachedFaceTextures.entrySet()) {
-                if (!newMap.containsKey(old.getKey())) {
-                    CanvasTextureManager.releaseTextures(self.getBlockPos());
-                }
+            if (face.pixels() == null || face.pixels().getWidth() <= 0 || face.pixels().getHeight() <= 0)
+                continue;
+            ResourceLocation tex = CanvasTextureManager.getOrUpdateTexture(face, painter$clientTextureId, faceIndex);
+            if (tex != null) {
+                newList.add(Pair.of(face, tex));
             }
+            faceIndex++;
         }
-        this.painter$cachedFaceTextures = newMap;
+        this.painter$cachedFaceTextures = newList.isEmpty() ? null : newList;
     }
 
     @Override
     public void painter$releaseTextures() {
-        if (painter$cachedFaceTextures != null) {
-            BlockEntity self = (BlockEntity) (Object) this;
-            CanvasTextureManager.releaseTextures(self.getBlockPos());
-        }
+        // 释放所有以当前 entityId 为前缀的纹理
+        CanvasTextureManager.releaseTextures(painter$clientTextureId);
     }
 }
