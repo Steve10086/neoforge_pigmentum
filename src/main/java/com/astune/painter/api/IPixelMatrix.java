@@ -30,7 +30,7 @@ public interface IPixelMatrix {
      * @param y 0~15
      * @param color ARGB 颜色值
      */
-    void setPixel(int x, int y, int color);
+    boolean setPixel(int x, int y, int color);
 
     IPixelMatrix copy();
 

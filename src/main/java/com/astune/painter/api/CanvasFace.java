@@ -120,7 +120,7 @@ public class CanvasFace {
 
     // 获取中心偏移（用于向后兼容）
     public Vec3 centerOffset() {
-        return corner0.add(corner1).add(corner2).add(corner3).scale(0.25);
+        return corner0.add(corner1).add(corner2).add(corner3).scale(0.25).scale(1 + OFFSET);
     }
 
     /**

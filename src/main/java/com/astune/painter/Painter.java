@@ -1,7 +1,7 @@
 package com.astune.painter;
 
-import com.astune.painter.attachment.ModAttachments;
 import com.astune.painter.client.CanvasRenderEventHandler;
+import com.astune.painter.network.CanvasUploadPacket;
 import com.astune.painter.network.SyncCanvasPacket;
 import com.astune.painter.registry.*;
 import com.mojang.logging.LogUtils;
@@ -16,8 +16,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockBehaviour;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.material.MapColor;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -107,11 +105,8 @@ public class Painter {
 
     private void registerPayloadHandlers(final RegisterPayloadHandlersEvent event) {
         final PayloadRegistrar registrar = event.registrar(MODID);
-        registrar.playToClient(
-                SyncCanvasPacket.TYPE,
-                SyncCanvasPacket.STREAM_CODEC,
-                SyncCanvasPacket::handle
-        );
+        registrar.playToClient(SyncCanvasPacket.TYPE, SyncCanvasPacket.STREAM_CODEC, SyncCanvasPacket::handleClient);
+        registrar.playToServer(CanvasUploadPacket.TYPE, CanvasUploadPacket.STREAM_CODEC, CanvasUploadPacket::handleServer);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

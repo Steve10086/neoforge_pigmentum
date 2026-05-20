@@ -1,0 +1,39 @@
+// api/IPaintProvider.java
+package com.astune.painter.api;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
+
+import javax.annotation.Nullable;
+
+/**
+ * 画笔提供者接口。任何物品实现此接口后，即可在手持时触发画布绘制。
+ */
+public interface IPaintProvider {
+
+    /**
+     * 返回此画笔在指定位置的绘制颜色。
+     * @return ARGB 颜色值，返回 null 表示擦除像素。
+     */
+    @Nullable
+    Integer getColor(ItemStack stack, Player player, Level level, BlockPos pos, CanvasFace face, int pixelX, int pixelY);
+
+    /**
+     * 每次渲染帧调用，可用于播放音效、消耗耐久等。
+     * 返回 true 表示本次绘制成功，false 表示不执行绘制。
+     */
+    default boolean onPaintTick(ItemStack stack, Player player, Level level) {
+        return true;
+    }
+
+    /**
+     * 画笔连续绘制时的间隔（渲染帧数）。
+     * 返回 1 表示每帧都画，2 表示隔一帧画一次。
+     */
+    default int getPaintInterval() {
+        return 1;
+    }
+}

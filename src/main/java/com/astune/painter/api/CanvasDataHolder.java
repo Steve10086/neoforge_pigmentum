@@ -13,6 +13,8 @@ public interface CanvasDataHolder {
     CanvasData painter$getCanvasData();
     void painter$setCanvasData(@Nullable CanvasData data);
 
+    void painter$addCanvasData(@Nullable CanvasData data);
+
     @Nullable
     List<Pair<CanvasFace, ResourceLocation>> painter$getCachedFaceTextures();
 

@@ -3,15 +3,19 @@ package com.astune.painter.client;
 import com.astune.painter.api.CanvasData;
 import com.astune.painter.api.CanvasDataHolder;
 import com.astune.painter.api.CanvasFace;
+import com.astune.painter.block.OcclusionCanvasBlock;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.datafixers.util.Pair;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.*;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -20,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 
 public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntity> {
-
     private static final float OFFSET = 0.001f; // 防止 Z-fighting
 
     public CanvasBlockEntityRenderer(BlockEntityRendererProvider.Context ctx) {}
@@ -30,7 +33,6 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
                        MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
         @Nullable List<Pair<CanvasFace, ResourceLocation>> textures = null;
         CanvasData canvas = null;
-
         if (be instanceof CanvasDataHolder holder) {
             textures = holder.painter$getCachedFaceTextures();
             if (textures == null) return;
@@ -39,7 +41,9 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
         if (canvas == null) return;
 
         //System.out.println("rendering canvas <" + textures +  "> at " + be.getBlockPos());
-
+        Level level = be.getLevel();
+        if (level == null) return;
+        BlockPos pos = be.getBlockPos();
 
         poseStack.pushPose();
         poseStack.translate(0.5, 0.5, 0.5); // 方块中心
@@ -51,17 +55,20 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
 
             Direction dir = face.primaryFace();
             Vec3[] corners = face.cornerWithOffset();
-
+            int faceLight = packedLight;
+            if (be.getBlockState().getBlock() instanceof OcclusionCanvasBlock){
+                faceLight = getNeighborLight(level, pos, dir);
+            }
 
             VertexConsumer vc = bufferSource.getBuffer(RenderType.entityTranslucent(tex));
             var last = poseStack.last();
             Vec3 normal = Vec3.atLowerCornerOf(dir.getNormal());
             float nx = (float) normal.x, ny = (float) normal.y, nz = (float) normal.z;
 
-            add(vc, last, corners[0], 0, 0, nx, ny, nz, packedLight, packedOverlay);
-            add(vc, last, corners[1], 1, 0, nx, ny, nz, packedLight, packedOverlay);
-            add(vc, last, corners[2], 1, 1, nx, ny, nz, packedLight, packedOverlay);
-            add(vc, last, corners[3], 0, 1, nx, ny, nz, packedLight, packedOverlay);
+            add(vc, last, corners[0], 0, 0, nx, ny, nz, faceLight, packedOverlay);
+            add(vc, last, corners[1], 1, 0, nx, ny, nz, faceLight, packedOverlay);
+            add(vc, last, corners[2], 1, 1, nx, ny, nz, faceLight, packedOverlay);
+            add(vc, last, corners[3], 0, 1, nx, ny, nz, faceLight, packedOverlay);
         }
         poseStack.popPose();
     }
@@ -73,4 +80,10 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
                 .setNormal(pose, nx, ny, nz);
     }
 
+    private int getNeighborLight(Level level, BlockPos pos, Direction dir) {
+        BlockPos neighborPos = pos.relative(dir);
+        int blockLight = level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, neighborPos);
+        int skyLight = level.getBrightness(net.minecraft.world.level.LightLayer.SKY, neighborPos);
+        return skyLight << 20 | blockLight << 4;
+    }
 }

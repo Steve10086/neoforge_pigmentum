@@ -6,8 +6,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.*;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.piston.PistonStructureResolver;
@@ -15,6 +21,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.level.PistonEvent;
@@ -22,6 +29,8 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.server.level.ServerLevel;
 import com.astune.painter.client.CanvasBlockClientExtensions;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.List;
 
 public abstract class CanvasBlock extends Block implements EntityBlock {
@@ -118,20 +127,6 @@ public abstract class CanvasBlock extends Block implements EntityBlock {
         BlockState mimicked = be.getMimickedState();
         if (mimicked == null) return;
 
-        BlockState updated = mimicked;
-        if (mimicked.getBlock() instanceof RedstoneLampBlock) {
-            boolean hasSignal = level.hasNeighborSignal(pos);
-            boolean currentLit = mimicked.getValue(RedstoneLampBlock.LIT);
-            if (hasSignal != currentLit) {
-                if (!hasSignal) {
-                    level.scheduleTick(pos, this, 4);
-                } else {
-                    // 充能：立即点亮
-                    updated = mimicked.setValue(RedstoneLampBlock.LIT, true);
-                }
-            }
-        }
-
         // ==== 关键：仅在活塞推/拉时，将数据写入缓存 ====
         if (movedByPiston) {
             CompoundTag data = be.saveWithoutMetadata(level.registryAccess());   // 序列化全部数据
@@ -145,17 +140,18 @@ public abstract class CanvasBlock extends Block implements EntityBlock {
             CanvasPistonDataCache.store(newPos, data);  // 以新坐标为键存储
         }
 
-        // 模拟原方块对所有邻居方向的状态更新
-        for (Direction dir : Direction.values()) {
-            BlockPos offsetPos = pos.relative(dir);
-            updated = updated.updateShape(dir, level.getBlockState(offsetPos),
-                    level, pos, offsetPos);
+        try {
+            Method method = mimicked.getBlock().getClass().getDeclaredMethod(
+                    "neighborChanged",
+                    BlockState.class, Level.class, BlockPos.class,
+                    Block.class, BlockPos.class, boolean.class
+            );
+            method.setAccessible(true);
+            method.invoke(mimicked.getBlock(), mimicked, level, pos,
+                    neighborBlock, neighborPos, movedByPiston);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            System.out.println("[CanvasBlock] failed to invoke neighborChanged for mimicked " + mimicked.getBlock().getName() + " because " + e);
         }
-
-        if (updated != mimicked) {
-            be.setMimickedState(updated);                     // 保存并标记脏
-        }
-        level.sendBlockUpdated(pos, state, state, 3);     // 通知客户端重新渲染
     }
     // --- 声音委托 ---
     @Override
@@ -210,7 +206,19 @@ public abstract class CanvasBlock extends Block implements EntityBlock {
 
     // --- 掉落物委托（已实现，但在 block 类里更合适） ---
     // 之前在 CanvasBlock 中已有 getDrops / getCloneItemStack，保留它们以传递画布数据
-
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
+                                            Player player, BlockHitResult hit) {
+        if (level.isClientSide) {
+            return InteractionResult.SUCCESS;
+        }
+        BlockState mimicked = getMimicked(level, pos);
+        if (mimicked != null) {
+            // 委托给原方块的交互逻辑
+            return mimicked.useWithoutItem(level, player, hit);
+        }
+        return super.useWithoutItem(state, level, pos, player, hit);
+    }
     // --- 随机 tick / 动画等委托 ---
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource rand) {
@@ -241,20 +249,25 @@ public abstract class CanvasBlock extends Block implements EntityBlock {
 
     @Override
     public void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
-        CanvasBlockEntity be = getCanvasBE(level, pos);
-        if (be == null) return;
-        BlockState mimicked = be.getMimickedState();
-        if (mimicked != null && mimicked.getBlock() instanceof RedstoneLampBlock) {
-            boolean hasSignal = level.hasNeighborSignal(pos);
-            boolean currentLit = mimicked.getValue(RedstoneLampBlock.LIT);
-            if (hasSignal) {
-                level.scheduleTick(pos, this, 4);
-            } else if (currentLit) {
-                BlockState newMimicked = mimicked.setValue(RedstoneLampBlock.LIT, false);
-                be.setMimickedState(newMimicked); // 这会同步
-            }
+        BlockState mimicked = getMimicked(level, pos);
+        if (mimicked != null) {
+            System.out.println("tick on " + mimicked.getBlock().getName());
+            // 直接调用原方块的 tick，由于 setBlock 已被拦截，所有状态变更都会安全转换
+            mimicked.tick(level, pos, random);
+            return; // 不再调用 super
         }
         super.tick(state, level, pos, random);
+    }
+
+    @Override
+    public MenuProvider getMenuProvider(BlockState state, Level level, BlockPos pos) {
+        if (!level.isClientSide) { // 只在服务端包装
+            BlockState mimicked = getMimicked(level, pos);
+            if (mimicked != null) {
+                return mimicked.getMenuProvider(level, pos);
+            }
+        }
+        return super.getMenuProvider(state, level, pos);
     }
 
 }

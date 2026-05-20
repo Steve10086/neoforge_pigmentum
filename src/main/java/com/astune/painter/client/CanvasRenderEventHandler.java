@@ -64,8 +64,8 @@ public class CanvasRenderEventHandler {
                         Vec3 offset = Vec3.atLowerCornerOf(pos)
                                 .subtract(Vec3.atLowerCornerOf(origin));
 
-                        // 为每一层渲染原方块模型
                         BakedModel blockModel = dispatcher.getBlockModel(renderState);
+
                         for (RenderType rendertype : blockModel.getRenderTypes(renderState, RandomSource.create(), null)){
                             poseStack.pushPose();
                             poseStack.translate(offset.x, offset.y, offset.z);

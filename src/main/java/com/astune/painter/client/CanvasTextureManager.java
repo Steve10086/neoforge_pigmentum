@@ -95,7 +95,14 @@ public class CanvasTextureManager {
                     int r = (argb >> 16) & 0xFF;
                     int g = (argb >> 8) & 0xFF;
                     int b = argb & 0xFF;
-                    image.setPixelRGBA(x, y, (a << 24) | (b << 16) | (g << 8) | r);
+
+                    int bgr = (b << 16) | (g << 8) | r;
+                    int abgr = (a << 24) | (b << 16) | (g << 8) | r;
+                    if (bgr != 0){
+                        abgr = 255 << 24 | bgr;
+                        //System.out.println("[CanvasTextureManager] " + a + "," + r + "," + g + "," + b + " to " + abgr);
+                    }
+                    image.setPixelRGBA(x, y, abgr);
                 }
             }
         } catch (Exception e) {

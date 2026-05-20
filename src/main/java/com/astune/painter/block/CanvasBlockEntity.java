@@ -49,6 +49,8 @@ public class CanvasBlockEntity extends BlockEntity {
                 players.forEach(player -> player.connection.send(packet));
             }
 
+            level.updateNeighborsAt(worldPosition, getBlockState().getBlock());
+
             int newLight = state.getLightEmission(level, worldPosition);
             if (oldLight != newLight) {
                 System.out.println("check light");

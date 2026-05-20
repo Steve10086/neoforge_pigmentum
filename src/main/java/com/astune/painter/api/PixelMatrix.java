@@ -47,9 +47,12 @@ public class PixelMatrix implements IPixelMatrix{
     }
 
     @Override
-    public void setPixel(int x, int y, int color) {
-        if (x < 0 || x >= width || y < 0 || y >= height) return;
+    public boolean setPixel(int x, int y, int color) {
+        //System.out.println("[PixelMatrix] add pixel on " + x + ", " + y);
+        if (x < 0 || x >= width || y < 0 || y >= height) return false;
+        if (pixels[y * width + x] == color) return false;
         pixels[y * width + x] = color;
+        return true;
     }
 
     @Override

@@ -4,6 +4,8 @@ import com.astune.painter.block.CanvasBlockModel;
 import com.astune.painter.mixin.BlockEntityRenderersAccessor;
 import com.astune.painter.registry.ModBlockEntities;
 import com.astune.painter.registry.ModBlocks;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.renderer.block.BlockModelShaper;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
@@ -18,12 +20,23 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
+import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 
 import java.util.Map;
 
 @EventBusSubscriber(modid = "painter", value = Dist.CLIENT)
 public class ClientSetup {
+    public static final KeyMapping KEY_PICK_COLOR = new KeyMapping(
+            "key.painter.pick_color",          // 翻译键
+            InputConstants.KEY_R,              // 默认 R 键
+            "key.categories.painter"           // 分类
+    );
+
+    @SubscribeEvent
+    public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
+        event.register(KEY_PICK_COLOR);
+    }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @SubscribeEvent

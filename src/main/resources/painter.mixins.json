@@ -3,9 +3,13 @@
   "package": "com.astune.painter.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "AbstractContainerMenuMixin",
     "BlockEntityMixin",
     "BlockEntityRenderersAccessor",
     "BlockStateBaseMixin",
+    "ItemCombinerMenuMixin",
+    "LevelAccessorMixin",
+    "LevelMixin",
     "PistonBaseBlockMixin",
     "PistonStructureResolverMixin"
   ],
