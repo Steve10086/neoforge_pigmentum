@@ -1,7 +1,6 @@
 package com.astune.painter.block;
 
 import com.astune.painter.network.ClientCanvasCache;
-import com.astune.painter.registry.ModBlocks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
@@ -13,7 +12,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.BlockAndTintGetter;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.client.model.data.ModelData;
@@ -30,8 +28,6 @@ public class CanvasBlockModel implements BakedModel {
 
     public CanvasBlockModel(BakedModel existingModel) {
         this.defaultModel = existingModel;
-        // 这里拿到 BlockRenderDispatcher 的引用，它是线程安全的
-        //this.blockRenderer = Minecraft.getInstance().getBlockRenderer();
     }
 
     @Override

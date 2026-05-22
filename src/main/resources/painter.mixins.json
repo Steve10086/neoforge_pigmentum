@@ -7,6 +7,7 @@
     "BlockEntityMixin",
     "BlockEntityRenderersAccessor",
     "BlockStateBaseMixin",
+    "ForgeHooksClientMixin",
     "ItemCombinerMenuMixin",
     "LevelAccessorMixin",
     "LevelMixin",

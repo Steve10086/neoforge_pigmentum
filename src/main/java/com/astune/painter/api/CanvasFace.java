@@ -95,7 +95,7 @@ public class CanvasFace {
                 Math.abs(a.z - b.z) < epsilon;
     }
 
-    private static final double OFFSET = 0.001;
+    private static final double OFFSET = 0.001f;
 
     /**
      * 返回沿法线方向偏移后的四个角点（相对于方块中心）
@@ -120,7 +120,7 @@ public class CanvasFace {
 
     // 获取中心偏移（用于向后兼容）
     public Vec3 centerOffset() {
-        return corner0.add(corner1).add(corner2).add(corner3).scale(0.25).scale(1 + OFFSET);
+        return corner0.add(corner1).add(corner2).add(corner3).scale(0.25);
     }
 
     /**

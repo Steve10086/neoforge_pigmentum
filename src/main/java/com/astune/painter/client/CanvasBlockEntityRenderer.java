@@ -32,22 +32,37 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
     public void render(BlockEntity be, float partialTick, PoseStack poseStack,
                        MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
         @Nullable List<Pair<CanvasFace, ResourceLocation>> textures = null;
-        CanvasData canvas = null;
         if (be instanceof CanvasDataHolder holder) {
             textures = holder.painter$getCachedFaceTextures();
-            if (textures == null) return;
-            canvas = holder.painter$getCanvasData();
+            if (textures == null) {
+                CanvasData canvasData = holder.painter$getCanvasData();
+                if (canvasData != null && !canvasData.isEmpty()){
+                    holder.painter$regenerateTextures(canvasData);
+                    textures = holder.painter$getCachedFaceTextures();
+                    if (textures == null) return;
+                }else{
+                    return;
+                }
+            };
         }
-        if (canvas == null) return;
 
         //System.out.println("rendering canvas <" + textures +  "> at " + be.getBlockPos());
         Level level = be.getLevel();
         if (level == null) return;
         BlockPos pos = be.getBlockPos();
+        boolean occlusion = (be.getBlockState().getBlock() instanceof OcclusionCanvasBlock);
 
         poseStack.pushPose();
         poseStack.translate(0.5, 0.5, 0.5); // 方块中心
 
+        renderCanvasTexture(level, pos, poseStack, bufferSource, textures, packedLight, packedOverlay, occlusion);
+
+        poseStack.popPose();
+    }
+
+    public static void renderCanvasTexture(Level level, BlockPos pos, PoseStack poseStack, MultiBufferSource bufferSource,
+                                           List<Pair<CanvasFace, ResourceLocation>> textures,
+                                           int packedLight, int packedOverlay, boolean isOcclusion){
         for (var pair : textures) {
             CanvasFace face = pair.getFirst();
             ResourceLocation tex = pair.getSecond();
@@ -56,7 +71,7 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
             Direction dir = face.primaryFace();
             Vec3[] corners = face.cornerWithOffset();
             int faceLight = packedLight;
-            if (be.getBlockState().getBlock() instanceof OcclusionCanvasBlock){
+            if (isOcclusion){
                 faceLight = getNeighborLight(level, pos, dir);
             }
 
@@ -70,17 +85,17 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
             add(vc, last, corners[2], 1, 1, nx, ny, nz, faceLight, packedOverlay);
             add(vc, last, corners[3], 0, 1, nx, ny, nz, faceLight, packedOverlay);
         }
-        poseStack.popPose();
     }
 
-    private void add(VertexConsumer vc, PoseStack.Pose pose, Vec3 pos, float u, float v,
+    private static void add(VertexConsumer vc, PoseStack.Pose pose, Vec3 pos, float u, float v,
                      float nx, float ny, float nz, int light, int overlay) {
         vc.addVertex(pose, (float) pos.x, (float) pos.y, (float) pos.z)
                 .setColor(255,255,255,255).setUv(u,v).setOverlay(overlay).setLight(light)
                 .setNormal(pose, nx, ny, nz);
+
     }
 
-    private int getNeighborLight(Level level, BlockPos pos, Direction dir) {
+    private static int getNeighborLight(Level level, BlockPos pos, Direction dir) {
         BlockPos neighborPos = pos.relative(dir);
         int blockLight = level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, neighborPos);
         int skyLight = level.getBrightness(net.minecraft.world.level.LightLayer.SKY, neighborPos);

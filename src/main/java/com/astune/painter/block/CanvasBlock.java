@@ -1,12 +1,17 @@
 package com.astune.painter.block;
 
+import com.astune.painter.api.CanvasDataHolder;
+import com.astune.painter.api.CanvasFace;
+import com.astune.painter.client.ClientPistonCache;
 import com.astune.painter.network.CanvasPistonDataCache;
+import com.mojang.datafixers.util.Pair;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
@@ -82,13 +87,10 @@ public abstract class CanvasBlock extends Block implements EntityBlock {
 
     @Override
     public int getLightEmission(BlockState state, BlockGetter level, BlockPos pos) {
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof CanvasBlockEntity canvasBE) {
-            BlockState mimicked = canvasBE.getMimickedState();
-            if (mimicked != null) {
-                int light = mimicked.getLightEmission(level, pos);
-                return light;
-            }
+        BlockState mimicked = getMimicked(level, pos);
+        if (mimicked != null) {
+            int light = mimicked.getLightEmission(level, pos);
+            return light;
         }
         return super.getLightEmission(state, level, pos);
     }
@@ -129,6 +131,7 @@ public abstract class CanvasBlock extends Block implements EntityBlock {
 
         // ==== 关键：仅在活塞推/拉时，将数据写入缓存 ====
         if (movedByPiston) {
+            System.out.println("pushed!!");
             CompoundTag data = be.saveWithoutMetadata(level.registryAccess());   // 序列化全部数据
             // 计算移动方向：从邻居指向本方块的方向即为活塞推出方向
             Direction dir = Direction.fromDelta(
@@ -137,7 +140,7 @@ public abstract class CanvasBlock extends Block implements EntityBlock {
                     pos.getZ() - neighborPos.getZ()
             );
             BlockPos newPos = pos.relative(dir);           // 移动后的新坐标
-            CanvasPistonDataCache.store(newPos, data);  // 以新坐标为键存储
+            ClientPistonCache.store(pos, data);  // 以新坐标为键存储
         }
 
         try {

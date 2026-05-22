@@ -6,11 +6,8 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 
-import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -18,6 +15,7 @@ public class CanvasTextureManager {
     // 键: "entityId_directionName", 值: 当前有效的 ResourceLocation
     private static final Map<String, ResourceLocation> ACTIVE = new ConcurrentHashMap<>();
     private static long COUNTER = 0;
+    public static int NEXT_TEXTURE_ID = 0;
 
     /**
      * 生成或更新指定实体某个方向的画布纹理。

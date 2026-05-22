@@ -30,7 +30,9 @@ public class CanvasData {
     public static final Codec<CanvasData> CODEC =
             Codec.list(CanvasFace.CODEC).xmap(CanvasData::new, CanvasData::faces);
 
-    public List<CanvasFace> faces() {return faces;}
+    public List<CanvasFace> faces() {
+        return faces;
+    }
 
     public static final StreamCodec<RegistryFriendlyByteBuf, CanvasData> STREAM_CODEC =
             StreamCodec.of(
@@ -64,13 +66,12 @@ public class CanvasData {
      * @return
      */
     public CanvasFace addOrGetFace(CanvasFace newFace) {
-        incrementVersion();
         for (int i = 0; i < faces.size(); i++) {
             if (faces.get(i).isSameSurface(newFace)) {
                 return faces.get(i);
             }
         }
-        System.out.println("adding new face!");
+        //System.out.println("adding new face!");
         faces.add(newFace);
         return newFace;
     }

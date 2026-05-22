@@ -6,11 +6,22 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @OnlyIn(Dist.CLIENT)
 public class ClientCanvasCache {
+    public static final Set<BlockPos> PENDING_POSITIONS = new HashSet<>();
+
+    public static void markPending(BlockPos pos) {
+        PENDING_POSITIONS.add(pos);
+    }
+
+    public static boolean isPending(BlockPos pos) {
+        return PENDING_POSITIONS.remove(pos);
+    }
     private static final Map<BlockPos, CanvasData> CANVAS_MAP = new ConcurrentHashMap<>();
     private static final Map<BlockPos, BlockState> STATE_MAP = new ConcurrentHashMap<>();
 

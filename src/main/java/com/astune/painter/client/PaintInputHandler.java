@@ -31,6 +31,7 @@ import javax.annotation.Nullable;
 import java.util.*;
 
 import static com.astune.painter.api.CanvasData.getOrCreateCanvasFace;
+import com.astune.painter.network.ClientCanvasCache;
 
 @EventBusSubscriber(modid = "painter", value = Dist.CLIENT)
 public class PaintInputHandler {
@@ -151,7 +152,9 @@ public class PaintInputHandler {
                 result = targetFace.pixels().setPixel(pixel[0], pixel[1], color);
             }
             if (result){
+                holder.painter$setCanvasData(canvas);
                 holder.painter$regenerateTextures(canvas);
+
                 addPendingPixel(pos, be);
             }
 
@@ -172,12 +175,26 @@ public class PaintInputHandler {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Pre event) {
         if (!pendingCanvasRequests.isEmpty()) {
-            System.out.println(pendingCanvasRequests.size() + " new updates!");
+            //System.out.println(pendingCanvasRequests.size() + " new updates!");
             for (CanvasUploadPacket packet : pendingCanvasRequests.values()) {
                 PacketDistributor.sendToServer(packet);
                 }
             }
             pendingCanvasRequests.clear();
+
+        if (!ClientCanvasCache.PENDING_POSITIONS.isEmpty()) {
+            for (BlockPos pos : ClientCanvasCache.PENDING_POSITIONS) {
+                BlockEntity be = Minecraft.getInstance().level.getBlockEntity(pos);
+                if (be instanceof CanvasDataHolder holder && holder.painter$getCanvasData() == null) {
+                    CanvasData cached = ClientCanvasCache.getCanvas(pos);
+                    if (cached != null) {
+                        holder.painter$setCanvasData(cached);
+                        holder.painter$regenerateTextures(cached);
+                    }
+                }
+            }
+            ClientCanvasCache.PENDING_POSITIONS.clear();
+        }
     }
 
     private static void addPendingPixel(BlockPos pos, BlockEntity be) {
@@ -188,8 +205,6 @@ public class PaintInputHandler {
         if(canvas == null) return;
         pendingCanvasRequests.put(pos, new CanvasUploadPacket(pos, canvas, CanvasAction.ADD_CREATION));
     }
-
-
 
     /**
      * 根据命中点和画布面信息，计算具体的像素索引。

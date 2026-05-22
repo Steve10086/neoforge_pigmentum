@@ -16,6 +16,6 @@ public class OcclusionCanvasBlock extends CanvasBlock{
 
     @Override
     public boolean useShapeForLightOcclusion(BlockState state) {
-        return true;  // 非完整方块不参与光照遮挡计算
+        return false;  // 非完整方块不参与光照遮挡计算
     }
 }

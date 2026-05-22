@@ -1,9 +1,6 @@
 package com.astune.painter.block;
 
 import com.astune.painter.api.CanvasDataHolder;
-import com.astune.painter.attachment.ModAttachments;
-import com.astune.painter.api.CanvasData;
-import com.astune.painter.registry.ModBlocks;
 import com.astune.painter.registry.ModDataComponents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
@@ -14,8 +11,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Optional;
 
 public class CanvasBlockItem extends BlockItem {
     public CanvasBlockItem(Block block, Properties properties) {

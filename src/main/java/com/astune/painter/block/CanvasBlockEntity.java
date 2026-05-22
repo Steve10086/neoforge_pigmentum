@@ -1,14 +1,9 @@
 package com.astune.painter.block;
 
-import com.astune.painter.api.CanvasData;
-import com.astune.painter.api.CanvasDataHolder;
-import com.astune.painter.api.CanvasFace;
-import com.astune.painter.client.CanvasTextureManager;
 import com.astune.painter.network.CanvasPistonDataCache;
 import com.astune.painter.network.ClientCanvasCache;
 import com.astune.painter.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -16,16 +11,12 @@ import net.minecraft.nbt.NbtUtils;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class CanvasBlockEntity extends BlockEntity {
 
@@ -41,7 +32,7 @@ public class CanvasBlockEntity extends BlockEntity {
         setChanged();
         if (level != null && !level.isClientSide) {
             ClientboundBlockEntityDataPacket packet = ClientboundBlockEntityDataPacket.create(this);
-            //System.out.println("[Server] setMimickedState packet=" + (packet != null) + " pos=" + worldPosition + " state=" + state);
+            //System.out.println("[Server] setMimickedState light=" + oldLight + " pos=" + worldPosition + " state=" + state);
             if (packet != null) {
                 var players = ((ServerLevel) level).getChunkSource().chunkMap
                         .getPlayers(new ChunkPos(worldPosition), false);
@@ -52,8 +43,9 @@ public class CanvasBlockEntity extends BlockEntity {
             level.updateNeighborsAt(worldPosition, getBlockState().getBlock());
 
             int newLight = state.getLightEmission(level, worldPosition);
+            //System.out.println("new light " + newLight);
             if (oldLight != newLight) {
-                System.out.println("check light");
+                //System.out.println("check light");
                 level.getLightEngine().checkBlock(worldPosition);
             }
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL_IMMEDIATE);
@@ -108,6 +100,9 @@ public class CanvasBlockEntity extends BlockEntity {
     @Override
     public void setRemoved() {
         super.setRemoved();
+        if (this.getLevel() != null && this.getLevel().isClientSide) {
+            ClientCanvasCache.removeMimickedState(this.getBlockPos());
+        }
     }
     
     // 用于客户端初始加载整个区块

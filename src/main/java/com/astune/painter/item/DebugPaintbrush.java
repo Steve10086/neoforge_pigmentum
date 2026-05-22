@@ -25,6 +25,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
@@ -148,6 +149,19 @@ public class DebugPaintbrush extends Item implements IPaintProvider {
             // 检查正在渲染的是否为 CROSSHAIR 覆盖层
             if (event.getName().equals(CROSSHAIR_ID) && sPickingColor) {
                 event.setCanceled(true);      // 取消准星渲染
+            }
+        }
+    }
+
+    @EventBusSubscriber(modid = "painter", value = Dist.CLIENT)
+    public static class PreventBlockUseHandler {
+        @SubscribeEvent
+        public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
+            ItemStack stack = event.getItemStack();
+            if (stack.getItem() instanceof DebugPaintbrush) {
+                // 取消对原方块的交互，只让画笔处理
+                event.setCancellationResult(InteractionResult.SUCCESS);
+                event.setCanceled(true);
             }
         }
     }
