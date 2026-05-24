@@ -1,7 +1,6 @@
 package com.astune.painter.item;
 
-import com.astune.painter.api.CanvasFace;
-import com.astune.painter.api.PaintProviders;
+import com.astune.painter.api.*;
 import com.astune.painter.registry.ModDataComponents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -20,16 +19,18 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
-import com.astune.painter.api.IPaintProvider;
 
 import java.nio.IntBuffer;
 import java.util.List;
@@ -51,6 +52,17 @@ public class DebugPaintbrush extends Item implements IPaintProvider {
     @Override
     public Integer getColor(ItemStack stack, Player player, Level level, BlockPos pos, CanvasFace face, int pixelX, int pixelY) {
         return getCurrentColor(stack);
+    }
+
+    @Nullable
+    @Override
+    public PaintPattern getPattern(ItemStack stack, Player player, Level level, BlockPos pos, Vec3 hitLoc) {
+        return new PaintPattern(1.0 , 1.0 , new PixelProvider() {
+            @Override
+            public @NotNull Integer getPixel(double dx, double dy) {
+                return getCurrentColor(stack);
+            }
+        });
     }
 
     private int getCurrentColor(ItemStack stack) {

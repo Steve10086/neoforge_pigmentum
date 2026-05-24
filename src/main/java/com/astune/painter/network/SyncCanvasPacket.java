@@ -69,9 +69,5 @@ public record SyncCanvasPacket(BlockPos pos, CanvasData canvasData,
         });
     }
 
-    public static void handle(SyncCanvasPacket packet, IPayloadContext ctx) {
-
-    }
-
 
 }

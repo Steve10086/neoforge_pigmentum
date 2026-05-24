@@ -24,7 +24,7 @@ public class AbstractContainerMenuMixin {
                                      CallbackInfoReturnable<Boolean> cir) {
         // 获取 access 中的位置和世界
         // ContainerLevelAccess 内部有两个重载，这里我们利用 evaluate 来获取信息
-        System.out.println("check menu");
+        //System.out.println("check menu");
         access.evaluate((level, pos) -> {
             BlockState state = level.getBlockState(pos);
             // 核心逻辑：如果方块是画布，检查内部的 mimickedState 是否与 targetBlock 匹配
@@ -33,7 +33,7 @@ public class AbstractContainerMenuMixin {
                 if (be instanceof CanvasBlockEntity canvasBE) {
                     BlockState mimicked = canvasBE.getMimickedState();
                     if (mimicked != null && mimicked.is(targetBlock)) {
-                        System.out.println("menu valid");
+                        //System.out.println("menu valid");
                         // 匹配成功
                         cir.setReturnValue(player.canInteractWithBlock(pos, 4.0));
                     }

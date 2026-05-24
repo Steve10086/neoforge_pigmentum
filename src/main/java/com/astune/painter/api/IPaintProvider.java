@@ -21,6 +21,15 @@ public interface IPaintProvider {
     @Nullable
     Integer getColor(ItemStack stack, Player player, Level level, BlockPos pos, CanvasFace face, int pixelX, int pixelY);
 
+    @Nullable
+    PaintPattern getPattern(ItemStack stack, Player player, Level level,
+                            BlockPos pos, Vec3 hitLoc);
+
+    default Double getStep(){
+        return 0.01;
+    }
+
+
     /**
      * 每次渲染帧调用，可用于播放音效、消耗耐久等。
      * 返回 true 表示本次绘制成功，false 表示不执行绘制。

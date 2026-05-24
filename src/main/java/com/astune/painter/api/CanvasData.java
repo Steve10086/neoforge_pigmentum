@@ -17,6 +17,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
@@ -91,6 +92,48 @@ public class CanvasData {
 
     public List<CanvasFace> getFaceAtHit(BlockPos pos, Vec3 hitLoc) {
         return getFaceAtHit(pos, hitLoc, 0.01);
+    }
+
+    public CanvasFace getFaceAtHit(BlockPos pos, BlockHitResult hitResult) {
+        Direction hitFace = hitResult.getDirection();
+        Vec3 hitLoc = hitResult.getLocation();
+        Vec3 localHit = hitLoc.subtract(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+        for (CanvasFace face : faces) {
+            if (face.primaryFace().equals(hitFace)){
+                Vec3 c0 = face.corner0();
+                Vec3 c1 = face.corner1();
+                Vec3 c3 = face.corner3();
+
+                Vec3 sideW = c1.subtract(c0);
+                Vec3 sideH = c3.subtract(c0);
+
+                // 提前缓存长度倒数
+                double invWLen = 1.0 / sideW.length();
+                double invHLen = 1.0 / sideH.length();
+
+                // 归一化向量
+                Vec3 normW = sideW.scale(invWLen);
+                Vec3 normH = sideH.scale(invHLen);
+
+                // 命中点相对面原点的偏移
+                Vec3 relative = localHit.subtract(c0);
+
+                // 计算 UV 坐标
+                double u = relative.dot(normW) * invWLen;
+                double v = relative.dot(normH) * invHLen;
+
+                // 检查点是否在面内
+                if (u >= 0 - 0.001 && u <= 1 + 0.001 && v >= 0 - 0.001 && v <= 1 + 0.001) {
+                    // 检查点是否在平面上
+                    Vec3 projected = c0.add(sideW.scale(u)).add(sideH.scale(v));
+                    if (localHit.distanceToSqr(projected) < 0.001) {
+                        //System.out.println("Hit at " + u + ", "+ v + "on face of size " + face.pixels().getWidth() + "," + face.pixels().getHeight());
+                        return face;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     public List<CanvasFace> getFaceAtHit(BlockPos pos, Vec3 hitLoc, double offset) {
