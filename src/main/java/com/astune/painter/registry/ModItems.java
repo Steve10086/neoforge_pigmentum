@@ -11,7 +11,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 public class ModItems {
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(Registries.ITEM, "painter");
-    public static final DeferredHolder<Item, DebugPaintbrush> PAINTBRUSH = ITEMS.register("debug_paintbrush",
+    public static final DeferredHolder<Item, DebugPaintbrush> PAINTBRUSH = ITEMS.register("paintbrush",
             () -> new DebugPaintbrush(new Item.Properties()
                     // 设置默认组件，让所有新画笔默认是白色
                     .component(ModDataComponents.CURRENT_COLOR.get(), 0xFFFFFFFF)

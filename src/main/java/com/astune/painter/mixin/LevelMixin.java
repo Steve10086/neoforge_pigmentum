@@ -39,6 +39,17 @@ public abstract class LevelMixin {
 
         //System.out.println(flags);
 
+        if ((!self.isClientSide) && newState.getBlock() instanceof CanvasBlock){ // handle unfinished tick events
+            boolean hadScheduledTick = self.getBlockTicks().hasScheduledTick(pos, oldState.getBlock());
+            int scheduledDelay = 0;
+            if (hadScheduledTick) {
+                scheduledDelay = 1;
+            }
+            if (hadScheduledTick) {
+                self.scheduleTick(pos, newState.getBlock(), scheduledDelay);
+            }
+        }
+
         if (!(oldState.getBlock() instanceof CanvasBlock)) return;
 
         if (!(be instanceof CanvasBlockEntity canvasBE)) return;
@@ -51,7 +62,7 @@ public abstract class LevelMixin {
             CompoundTag data = be.saveWithoutMetadata(self.registryAccess());
             ClientPistonCache.store(pos, data);
             List<Pair<CanvasFace, ResourceLocation>> texture = ((CanvasDataHolder) be).painter$getCachedFaceTextures();
-            System.out.println("[LevelMixin] Piston triggered! textures = " + texture);
+            //System.out.println("[LevelMixin] Piston triggered! textures = " + texture);
             if (texture != null){
                 ClientPistonCache.storeCanvasTexture(pos, texture);
             }
@@ -59,19 +70,35 @@ public abstract class LevelMixin {
 
         // ⚡ 关键判断：新状态是否和当前 mimickedState 同一种方块
         if (newState.is(mimicked.getBlock())) {
-            // 内部状态切换 → 更新 mimickedState，不改变画布方块本身
             canvasBE.setMimickedState(newState);
-            System.out.println("setBlock being blocked");
+
             if (!self.isClientSide) {
+                // 发送实体同步包
                 ClientboundBlockEntityDataPacket packet = ClientboundBlockEntityDataPacket.create(canvasBE);
                 if (packet != null) {
                     ((ServerLevel) self).getChunkSource().chunkMap
                             .getPlayers(new ChunkPos(pos), false)
                             .forEach(p -> p.connection.send(packet));
                 }
+
+                // ★ 模拟原版 markAndNotifyBlock 的关键更新
+                int updateFlags = flags & -34; // 去掉 SUPPRESS_DROPS(32) 和 MOVE_BY_PISTON(64)
+                if ((flags & 16) == 0 && recursionLeft > 0) {
+                    // 触发形状更新（包括间接）
+                    oldState.updateIndirectNeighbourShapes(self, pos, updateFlags, recursionLeft - 1);
+                    newState.updateNeighbourShapes(self, pos, updateFlags, recursionLeft - 1);
+                    newState.updateIndirectNeighbourShapes(self, pos, updateFlags, recursionLeft - 1);
+                }
+                if ((flags & 1) != 0) {
+                    self.blockUpdated(pos, oldState.getBlock());
+                    if (newState.hasAnalogOutputSignal()) {
+                        self.updateNeighbourForOutputSignal(pos, newState.getBlock());
+                    }
+                }
             }
-            self.sendBlockUpdated(pos, oldState, oldState, Block.UPDATE_ALL_IMMEDIATE);
-            cir.setReturnValue(true); // 拦截
+
+            self.sendBlockUpdated(pos, oldState, oldState, flags);
+            cir.setReturnValue(true);
         }
 
 

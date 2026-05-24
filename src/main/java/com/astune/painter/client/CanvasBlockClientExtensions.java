@@ -9,6 +9,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions;
 
 public class CanvasBlockClientExtensions implements IClientBlockExtensions {
@@ -27,7 +28,10 @@ public class CanvasBlockClientExtensions implements IClientBlockExtensions {
         }
 
         // 手动产生破坏粒子
-        AABB box = mimicked.getShape(level, pos).bounds();
+        VoxelShape shape = mimicked.getShape(level, pos);
+        if(shape.isEmpty()) return false;
+
+        AABB box = shape.bounds();
         int count = 48;   // 粒子数量，可根据需要调整
         for (int i = 0; i < count; i++) {
             double x = pos.getX() + level.random.nextDouble() * (box.maxX - box.minX) + box.minX;

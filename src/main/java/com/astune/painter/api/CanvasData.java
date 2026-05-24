@@ -3,6 +3,7 @@ package com.astune.painter.api;
 import com.astune.painter.block.CanvasBlock;
 import com.astune.painter.block.CanvasBlockEntity;
 import com.astune.painter.registry.ModBlocks;
+import com.astune.painter.util.CanvasBlacklist;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.BlockPos;
@@ -10,8 +11,11 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -240,21 +244,29 @@ public class CanvasData {
         }
         // 情况2：无实体方块 → 替换为 CanvasBlock
         else {
-            BlockState originalState = state;
-            CanvasBlock canvasBlock = originalState.isSolidRender(level, pos)
-                    ? ModBlocks.CANVAS_OCCLUSION.get()
-                    : ModBlocks.CANVAS_NO_OCCLUSION.get();
-            //System.out.println("Paint a " + canvasBlock);
-            level.setBlock(pos, canvasBlock.defaultBlockState(), 3);
-            BlockEntity newBe = level.getBlockEntity(pos);
-            if (newBe instanceof CanvasBlockEntity canvasBE) {
-                canvasBE.setMimickedState(originalState);
+            if (CanvasBlacklist.isAllowed(state.getBlock())){
+                BlockState originalState = state;
+                replaceWithCanvas(level, pos, originalState);
+                BlockEntity newBe = level.getBlockEntity(pos);
                 canvas = CanvasData.empty();
                 if (newBe instanceof CanvasDataHolder holder) holder.painter$setCanvasData(canvas);
                 canvas.addOrGetFace(newFace);
             }
         }
         return new Pair<>(canvas, newFace);
+    }
+
+    private static void replaceWithCanvas(Level level, BlockPos pos, BlockState originalState) {
+        CanvasBlock canvasBlock = originalState.isSolidRender(level, pos)
+                ? ModBlocks.CANVAS_OCCLUSION.get()
+                : ModBlocks.CANVAS_NO_OCCLUSION.get();
+        //System.out.println("Paint a " + canvasBlock);
+
+        level.setBlock(pos, canvasBlock.defaultBlockState(), 3);
+        BlockEntity newBe = level.getBlockEntity(pos);
+        if (newBe instanceof CanvasBlockEntity canvasBE) {
+            canvasBE.setMimickedState(originalState);
+        }
     }
 
     /**

@@ -1,38 +1,31 @@
 package com.astune.painter.block;
 
 import com.astune.painter.api.CanvasDataHolder;
-import com.astune.painter.api.CanvasFace;
 import com.astune.painter.client.ClientPistonCache;
-import com.astune.painter.network.CanvasPistonDataCache;
-import com.mojang.datafixers.util.Pair;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import com.astune.painter.registry.ModDataComponents;
+import com.astune.painter.util.CanvasBlacklist;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
-import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.*;
+import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.*;
-import net.minecraft.world.level.block.piston.PistonStructureResolver;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.event.level.PistonEvent;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.server.level.ServerLevel;
-import com.astune.painter.client.CanvasBlockClientExtensions;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -76,6 +69,68 @@ public abstract class CanvasBlock extends Block implements EntityBlock {
         // 需要光照遮挡计算，委托给 mimickedState 的同名方法（若可用）
         // 但此方法没有 level/pos，只能返回 true 让形状决定
         return true;
+    }
+    // --- interaction ---
+    @Override
+    public void fallOn(Level level, BlockState state, BlockPos pos, Entity entity, float fallDistance) {
+        BlockState mimicked = getMimicked(level, pos);
+        if (mimicked != null) {
+            mimicked.getBlock().fallOn(level, mimicked, pos, entity, fallDistance);
+        } else {
+            super.fallOn(level, state, pos, entity, fallDistance);
+        }
+    }
+
+    @Override
+    public void stepOn(Level level, BlockPos pos, BlockState state, Entity entity) {
+        BlockState mimicked = getMimicked(level, pos);
+        if (mimicked != null) {
+            mimicked.getBlock().stepOn(level, pos, mimicked, entity);
+        } else {
+            super.stepOn(level, pos, state, entity);
+        }
+    }
+
+    @Override
+    public void wasExploded(Level level, BlockPos pos, Explosion explosion) {
+        BlockState mimicked = getMimicked(level, pos);
+        if (mimicked != null) {
+            mimicked.getBlock().wasExploded(level, pos, explosion);
+        } else {
+            super.wasExploded(level, pos, explosion);
+        }
+    }
+
+    @Override
+    public void handlePrecipitation(BlockState state, Level level, BlockPos pos, Biome.Precipitation precipitation) {
+        BlockState mimicked = getMimicked(level, pos);
+        if (mimicked != null) {
+            mimicked.getBlock().handlePrecipitation(mimicked, level, pos, precipitation);
+        } else {
+            super.handlePrecipitation(state, level, pos, precipitation);
+        }
+    }
+
+    @Override
+    public void destroy(LevelAccessor level, BlockPos pos, BlockState state) {
+        BlockState mimicked = getMimicked(level, pos);
+        if (mimicked != null) {
+            mimicked.getBlock().destroy(level, pos, mimicked);
+        } else {
+            super.destroy(level, pos, state);
+        }
+    }
+
+    @Override
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        BlockPos pos = context.getClickedPos();
+        Level level = context.getLevel();
+        BlockState mimicked = getMimicked(level, pos);
+        if (mimicked != null) {
+            return mimicked.getBlock().getStateForPlacement(context);
+        } else {
+            return super.getStateForPlacement(context);
+        }
     }
 
     // --- 光照委托 ---
@@ -129,22 +184,9 @@ public abstract class CanvasBlock extends Block implements EntityBlock {
         BlockState mimicked = be.getMimickedState();
         if (mimicked == null) return;
 
-        // ==== 关键：仅在活塞推/拉时，将数据写入缓存 ====
-        if (movedByPiston) {
-            System.out.println("pushed!!");
-            CompoundTag data = be.saveWithoutMetadata(level.registryAccess());   // 序列化全部数据
-            // 计算移动方向：从邻居指向本方块的方向即为活塞推出方向
-            Direction dir = Direction.fromDelta(
-                    pos.getX() - neighborPos.getX(),
-                    pos.getY() - neighborPos.getY(),
-                    pos.getZ() - neighborPos.getZ()
-            );
-            BlockPos newPos = pos.relative(dir);           // 移动后的新坐标
-            ClientPistonCache.store(pos, data);  // 以新坐标为键存储
-        }
-
         try {
-            Method method = mimicked.getBlock().getClass().getDeclaredMethod(
+            mimicked.getBlock();
+            Method method = mimicked.getBlock().getClass().getMethod(
                     "neighborChanged",
                     BlockState.class, Level.class, BlockPos.class,
                     Block.class, BlockPos.class, boolean.class
@@ -152,8 +194,9 @@ public abstract class CanvasBlock extends Block implements EntityBlock {
             method.setAccessible(true);
             method.invoke(mimicked.getBlock(), mimicked, level, pos,
                     neighborBlock, neighborPos, movedByPiston);
+            //System.out.println("[CanvasBlock] success to invoke neighborChanged for mimicked " + mimicked.getBlock().getName());
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-            System.out.println("[CanvasBlock] failed to invoke neighborChanged for mimicked " + mimicked.getBlock().getName() + " because " + e);
+            //System.out.println("[CanvasBlock] failed to invoke neighborChanged for mimicked " + mimicked.getBlock().getName() + " because " + e);
         }
     }
     // --- 声音委托 ---
@@ -207,11 +250,41 @@ public abstract class CanvasBlock extends Block implements EntityBlock {
     }
 
 
-    // --- 掉落物委托（已实现，但在 block 类里更合适） ---
+    // --- 掉落物委托 ---
     // 之前在 CanvasBlock 中已有 getDrops / getCloneItemStack，保留它们以传递画布数据
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
-                                            Player player, BlockHitResult hit) {
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        BlockState mimicked = getMimicked(level, pos);
+        if (mimicked != null) {
+            // 委托原方块的破坏前行为
+            mimicked.getBlock().playerWillDestroy(level, pos, mimicked, player);
+        }
+        return super.playerWillDestroy(level, pos, state, player);
+    }
+
+    @Override
+    public void playerDestroy(Level level, Player player, BlockPos pos, BlockState state, @Nullable BlockEntity be, ItemStack tool) {
+        BlockState mimicked = getMimicked(level, pos);
+        if (mimicked != null) {
+            mimicked.getBlock().playerDestroy(level, player, pos, mimicked, be, tool);
+        } else {
+            super.playerDestroy(level, player, pos, state, be, tool);
+        }
+    }
+
+    @Override
+    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
+        BlockState mimicked = getMimicked(level, pos);
+        if (mimicked != null) {
+            return mimicked.getBlock().getCloneItemStack(level, pos, state);
+        } else {
+            return super.getCloneItemStack(level, pos, state);
+        }
+    }
+
+    @Override
+    protected @NotNull InteractionResult useWithoutItem(@NotNull BlockState state, Level level, @NotNull BlockPos pos,
+                                                        @NotNull Player player, @NotNull BlockHitResult hit) {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
@@ -222,6 +295,7 @@ public abstract class CanvasBlock extends Block implements EntityBlock {
         }
         return super.useWithoutItem(state, level, pos, player, hit);
     }
+
     // --- 随机 tick / 动画等委托 ---
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource rand) {
@@ -242,8 +316,11 @@ public abstract class CanvasBlock extends Block implements EntityBlock {
             if (mimicked != null) {
                 // 委托给原方块的状态更新
                 BlockState newMimicked = mimicked.updateShape(direction, neighborState, level, pos, neighborPos);
-                // 重要：将更新后的状态设置回 BlockEntity（但不在此处发同步包，以免递归）
-                canvasBE.setMimickedState(newMimicked);
+                if (!CanvasBlacklist.isAllowed(newMimicked.getBlock())){
+                    return newMimicked;
+                }else{
+                    canvasBE.setMimickedState(newMimicked);
+                }
             }
         }
         // 返回自身状态，保持画布方块的身份不变
@@ -254,7 +331,7 @@ public abstract class CanvasBlock extends Block implements EntityBlock {
     public void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
         BlockState mimicked = getMimicked(level, pos);
         if (mimicked != null) {
-            System.out.println("tick on " + mimicked.getBlock().getName());
+            //System.out.println("tick on " + mimicked.getBlock().getName());
             // 直接调用原方块的 tick，由于 setBlock 已被拦截，所有状态变更都会安全转换
             mimicked.tick(level, pos, random);
             return; // 不再调用 super
@@ -271,6 +348,17 @@ public abstract class CanvasBlock extends Block implements EntityBlock {
             }
         }
         return super.getMenuProvider(state, level, pos);
+    }
+
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
+        if (!state.is(newState.getBlock())) {
+            BlockState mimicked = getMimicked(level, pos);
+            if (mimicked != null) {
+                mimicked.onRemove(level, pos, newState, moved);
+            }
+        }
+        super.onRemove(state, level, pos, newState, moved);
     }
 
 }

@@ -54,7 +54,7 @@ public class PaintInputHandler {
             return;
         }
 
-        boolean isDrawing = mc.player.getMainHandItem().getItem() instanceof DebugPaintbrush
+        boolean isDrawing = mc.player.getMainHandItem().getItem() instanceof IPaintProvider
                 && PaintProviders.getProvider(mc.player.getMainHandItem()) != null
                 && mc.options.keyUse.isDown();
 

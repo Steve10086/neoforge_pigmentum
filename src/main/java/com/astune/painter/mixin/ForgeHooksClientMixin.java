@@ -41,7 +41,7 @@ public class ForgeHooksClientMixin {
 
         CompoundTag tag = ClientPistonCache.get(pos);
         if (tag != null && tag.contains("mimicked_state")){
-            System.out.println("render animated state");
+            //System.out.println("render animated state");
             RegistryAccess registries = Minecraft.getInstance().level.registryAccess();
             BlockState state1 = NbtUtils.readBlockState(registries.lookupOrThrow(Registries.BLOCK), tag.getCompound("mimicked_state"));
 
@@ -54,7 +54,7 @@ public class ForgeHooksClientMixin {
         }
         List<Pair<CanvasFace, ResourceLocation>> texture = ClientPistonCache.getCanvasTexture(pos);
         if (texture != null){
-            System.out.println("get textures");
+            //System.out.println("get textures");
             stack.pushPose();
             stack.translate(0.5, 0.5, 0.5); // 方块中心
             CanvasBlockEntityRenderer.renderCanvasTexture(level, pos, stack, bufferSource, texture, 0, packedOverlay, true);

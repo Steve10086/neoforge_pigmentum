@@ -55,7 +55,8 @@ public class ClientPistonCache {
 
     public static List<Pair<CanvasFace, ResourceLocation>> getCanvasTexture(BlockPos pos) {
         //System.out.println("[CanvasPistonDataCache] Loading data from " + pos);
-        return TEXTURE_CACHE.get(pos).getFirst();
+        if (TEXTURE_CACHE.get(pos) != null) return TEXTURE_CACHE.get(pos).getFirst();
+        return null;
     }
 
     public static void remove(BlockPos pos){
