@@ -1,6 +1,7 @@
 // api/IPaintProvider.java
 package com.astune.painter.api;
 
+import com.astune.painter.api.blend.BlendFunction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -44,5 +45,10 @@ public interface IPaintProvider {
      */
     default int getPaintInterval() {
         return 1;
+    }
+
+    @Nullable
+    default BlendFunction getCustomBlendFunction(ItemStack stack) {
+        return null;
     }
 }

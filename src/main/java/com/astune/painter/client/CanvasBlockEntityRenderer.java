@@ -3,6 +3,9 @@ package com.astune.painter.client;
 import com.astune.painter.api.CanvasData;
 import com.astune.painter.api.CanvasDataHolder;
 import com.astune.painter.api.CanvasFace;
+import com.astune.painter.api.render.CanvasPixelRenderer;
+import com.astune.painter.api.render.CanvasRendererRegistry;
+import com.astune.painter.api.render.RenderContext;
 import com.astune.painter.block.OcclusionCanvasBlock;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -24,14 +27,14 @@ import java.util.List;
 import java.util.Map;
 
 public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntity> {
-    private static final float OFFSET = 0.001f; // 防止 Z-fighting
+    private static final float OFFSET = 0.001f;
 
     public CanvasBlockEntityRenderer(BlockEntityRendererProvider.Context ctx) {}
 
     @Override
     public void render(BlockEntity be, float partialTick, PoseStack poseStack,
                        MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
-        @Nullable List<Pair<CanvasFace, ResourceLocation>> textures = null;
+        List<Pair<CanvasFace, ResourceLocation>> textures = null;
         if (be instanceof CanvasDataHolder holder) {
             textures = holder.painter$getCachedFaceTextures();
             if (textures == null) {
@@ -40,61 +43,50 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
                     holder.painter$regenerateTextures(canvasData);
                     textures = holder.painter$getCachedFaceTextures();
                     if (textures == null) return;
-                }else{
+                } else {
                     return;
                 }
-            };
+            }
         }
 
-        //System.out.println("rendering canvas <" + textures +  "> at " + be.getBlockPos());
         Level level = be.getLevel();
         if (level == null) return;
         BlockPos pos = be.getBlockPos();
         boolean occlusion = (be.getBlockState().getBlock() instanceof OcclusionCanvasBlock);
 
         poseStack.pushPose();
-        poseStack.translate(0.5, 0.5, 0.5); // 方块中心
+        poseStack.translate(0.5, 0.5, 0.5);
 
         renderCanvasTexture(level, pos, poseStack, bufferSource, textures, packedLight, packedOverlay, occlusion);
 
         poseStack.popPose();
     }
 
-    public static void renderCanvasTexture(Level level, BlockPos pos, PoseStack poseStack, MultiBufferSource bufferSource,
+    public static void renderCanvasTexture(Level level, BlockPos pos, PoseStack poseStack,
+                                           MultiBufferSource bufferSource,
                                            List<Pair<CanvasFace, ResourceLocation>> textures,
-                                           int packedLight, int packedOverlay, boolean isOcclusion){
+                                           int packedLight, int packedOverlay, boolean isOcclusion) {
         for (var pair : textures) {
             CanvasFace face = pair.getFirst();
             ResourceLocation tex = pair.getSecond();
             if (tex == null) continue;
 
-            Direction dir = face.primaryFace();
-            Vec3[] corners = face.cornerWithOffset();
+            // 处理光照
             int faceLight = packedLight;
-            if (isOcclusion){
-                faceLight = getNeighborLight(level, pos, dir);
+            if (isOcclusion) {
+                faceLight = getNeighborLight(level, pos, face.primaryFace());
             }
 
-            VertexConsumer vc = bufferSource.getBuffer(RenderType.entityTranslucent(tex));
-            var last = poseStack.last();
-            Vec3 normal = Vec3.atLowerCornerOf(dir.getNormal());
-            float nx = (float) normal.x, ny = (float) normal.y, nz = (float) normal.z;
+            RenderContext context = new RenderContext(face, tex, poseStack, bufferSource,
+                    faceLight, packedOverlay, level, pos, isOcclusion);
 
-            add(vc, last, corners[0], 0, 0, nx, ny, nz, faceLight, packedOverlay);
-            add(vc, last, corners[1], 1, 0, nx, ny, nz, faceLight, packedOverlay);
-            add(vc, last, corners[2], 1, 1, nx, ny, nz, faceLight, packedOverlay);
-            add(vc, last, corners[3], 0, 1, nx, ny, nz, faceLight, packedOverlay);
+            CanvasPixelRenderer renderer = CanvasRendererRegistry.resolve(context);
+            renderer.renderFace(context);  // 总是处理，默认实现保证 true
         }
     }
 
-    private static void add(VertexConsumer vc, PoseStack.Pose pose, Vec3 pos, float u, float v,
-                     float nx, float ny, float nz, int light, int overlay) {
-        vc.addVertex(pose, (float) pos.x, (float) pos.y, (float) pos.z)
-                .setColor(255,255,255,255).setUv(u,v).setOverlay(overlay).setLight(light)
-                .setNormal(pose, nx, ny, nz);
-
-    }
-
+    // 保留原有的 add 和 getNeighborLight 可以移除，因为已移至 Default 渲染器
+    // 但 getNeighborLight 仍需要，因为光照计算还在 BER 中
     private static int getNeighborLight(Level level, BlockPos pos, Direction dir) {
         BlockPos neighborPos = pos.relative(dir);
         int blockLight = level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, neighborPos);

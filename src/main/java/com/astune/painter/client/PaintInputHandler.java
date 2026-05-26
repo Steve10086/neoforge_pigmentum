@@ -2,6 +2,8 @@
 package com.astune.painter.client;
 
 import com.astune.painter.api.*;
+import com.astune.painter.api.blend.BlendContext;
+import com.astune.painter.api.blend.BlendFunction;
 import com.astune.painter.network.CanvasAction;
 import com.astune.painter.network.CanvasUploadPacket;
 import com.mojang.datafixers.util.Pair;
@@ -193,6 +195,11 @@ public class PaintInputHandler {
             }
         }
 
+        ItemStack stack = null;
+        if (mc.player != null) {
+            stack = mc.player.getMainHandItem();
+        }
+
         boolean[][] processed = new boolean[stepsX][stepsY];
 
         for (int j = 0; j < stepsY; j++) {
@@ -288,8 +295,17 @@ public class PaintInputHandler {
 
                             Integer color = provider.getPixel(x, y);
                             if (color != null) {
-                                color = applyBlendMode(targetFace.pixels().getPixel(px, py), color, provider.getBlendMode(x, y));
-                                result = targetFace.pixels().setPixel(px, py, color) || result;
+                                // 获取混合函数：优先从画笔获取自定义混合，其次使用 BlendMode 枚举的默认
+                                BlendFunction blendFunc = provider instanceof IPaintProvider ip ? ip.getCustomBlendFunction(stack) : null;
+                                if (blendFunc == null) {
+                                    blendFunc = provider.getBlendMode(x, y).getDefaultFunction();
+                                }
+
+                                Map<String, Integer> effects = provider.getEffectValues(x, y);
+                                BlendContext context = new BlendContext(targetFace, px, py, targetFace.pixels().getPixel(px, py), color,
+                                        blendFunc == null ? provider.getBlendMode(x, y) : null,
+                                        stack, effects);
+                                result = blendFunc.apply(context) || result;
                             }
                         }
                     }

@@ -1,6 +1,8 @@
 package com.astune.painter;
 
+import com.astune.painter.api.render.CanvasRendererRegistry;
 import com.astune.painter.client.CanvasRenderEventHandler;
+import com.astune.painter.client.DefaultCanvasPixelRenderer;
 import com.astune.painter.network.CanvasUploadPacket;
 import com.astune.painter.network.SyncCanvasPacket;
 import com.astune.painter.registry.*;
