@@ -96,9 +96,9 @@ public class CanvasTextureManager {
 
                     int bgr = (b << 16) | (g << 8) | r;
                     int abgr = (a << 24) | (b << 16) | (g << 8) | r;
-                    if (bgr != 0){
+                    if (bgr != 0 && a == 0){
                         abgr = 255 << 24 | bgr;
-                        //System.out.println("[CanvasTextureManager] " + a + "," + r + "," + g + "," + b + " to " + abgr);
+                        System.out.println("[CanvasTextureManager] anomaly pixel detected ! " + a + "," + r + "," + g + "," + b);
                     }
                     image.setPixelRGBA(x, y, abgr);
                 }

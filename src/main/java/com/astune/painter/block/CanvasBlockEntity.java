@@ -1,8 +1,13 @@
 package com.astune.painter.block;
 
+import com.astune.painter.api.CanvasData;
+import com.astune.painter.api.CanvasDataHolder;
+import com.astune.painter.api.CanvasFace;
+import com.astune.painter.api.PixelMatrix;
 import com.astune.painter.network.CanvasPistonDataCache;
 import com.astune.painter.network.ClientCanvasCache;
 import com.astune.painter.registry.ModBlockEntities;
+import com.astune.painter.util.CanvasBlacklist;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
@@ -14,6 +19,7 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
@@ -49,7 +55,10 @@ public class CanvasBlockEntity extends BlockEntity {
                 level.getLightEngine().checkBlock(worldPosition);
             }
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL_IMMEDIATE);
+
+            //checkAndRestoreIfNeeded();
         }
+
 
     }
 
@@ -118,6 +127,48 @@ public class CanvasBlockEntity extends BlockEntity {
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    public void checkAndRestoreIfNeeded() {
+        if (level == null || level.isClientSide || mimickedState == null) return;
+
+        boolean shouldRestore = false;
+        BlockState restoreState = Blocks.AIR.defaultBlockState();
+
+        if (!CanvasBlacklist.isAllowed(mimickedState.getBlock())) {
+            shouldRestore = true;
+            restoreState = mimickedState != null ? mimickedState : Blocks.AIR.defaultBlockState();
+        } else if (isCanvasEmpty()) {
+            shouldRestore = true;
+            restoreState = mimickedState;
+        }
+
+        if (shouldRestore) {
+            // ★ 关键：置空 mimickedState，避免 LevelMixin 拦截恢复 setBlock
+            this.mimickedState = null;
+            // 恢复方块
+            level.setBlock(worldPosition, restoreState, Block.UPDATE_ALL_IMMEDIATE);
+            // 移除画布方块实体
+            level.removeBlockEntity(worldPosition);
+        }
+    }
+
+    public boolean isCanvasEmpty() {
+        if (!(this instanceof CanvasDataHolder holder)) return true;
+        CanvasData data = holder.painter$getCanvasData();
+        if (data == null || data.faces().isEmpty()) return true;
+        for (CanvasFace face : data.faces()) {
+            PixelMatrix matrix = face.pixels();
+            if (matrix == null) continue;
+            for (int y = 0; y < matrix.getHeight(); y++) {
+                for (int x = 0; x < matrix.getWidth(); x++) {
+                    if ((matrix.getPixel(x, y) >>> 24) != 0) {
+                        return false; // 有非透明像素
+                    }
+                }
+            }
+        }
+        return true;
     }
 
 }

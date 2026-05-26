@@ -1,0 +1,29 @@
+{
+  "block.painter.example_block": "Example Block",
+  "item.painter.example_item": "Example Item",
+
+  "painter.configuration.title": "Painter Configs",
+  "painter.configuration.section.painter.common.toml": "Painter Configs",
+  "painter.configuration.section.painter.common.toml.title": "Painter Configs",
+  "painter.configuration.items": "Item List",
+  "painter.configuration.logDirtBlock": "Log Dirt Block",
+  "painter.configuration.magicNumberIntroduction": "Magic Number Text",
+  "painter.configuration.magicNumber": "Magic Number",
+
+  "itemGroup.painter": "绘画",
+  "block.painter.canvas": "画布方块",
+  "item.painter.debug_paintbrush": "调试画笔",
+  "item.painter.canvas": "画布方块",
+
+  "painter.config.title": "画笔配置",
+  "painter.config.brush_size": "大小: %s",
+  "painter.config.opacity": "透明度: %s",
+  "painter.config.feather": "羽化: %s",
+  "painter.config.blend_mode": "模式: %s",
+  "painter.config.step_size": "步长: %s",
+
+  "painter.blend_mode.overwrite": "覆盖",
+  "painter.blend_mode.add": "叠加",
+  "painter.blend_mode.multiply": "正片叠底",
+  "painter.blend_mode.erase": "擦除"
+}

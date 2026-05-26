@@ -81,6 +81,11 @@ public record CanvasUploadPacket(BlockPos pos, CanvasData canvasData, CanvasActi
                 case null, default : {return;}
             }
 
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof CanvasBlockEntity canvasBE) {
+                canvasBE.checkAndRestoreIfNeeded();
+            }
+
             // 同步回所有客户端
             syncToClients(level, pos, packet.canvasData(), level.getBlockState(pos));
         });

@@ -13,5 +13,17 @@
   "itemGroup.painter": "Painting",
   "block.painter.canvas": "Canvas Block",
   "item.painter.debug_paintbrush": "Debug Paintbrush",
-  "item.painter.canvas": "Canvas Block"
+  "item.painter.canvas": "Canvas Block",
+
+  "painter.config.title": "Brush Config",
+  "painter.config.brush_size": "Size: %s",
+  "painter.config.opacity": "Opacity: %s",
+  "painter.config.feather": "Feather: %s",
+  "painter.config.blend_mode": "Mode: %s",
+  "painter.config.step_size": "Step: %s",
+
+  "painter.blend_mode.overwrite": "Overwrite",
+  "painter.blend_mode.add": "Add",
+  "painter.blend_mode.multiply": "Multiply",
+  "painter.blend_mode.erase": "Erase"
 }

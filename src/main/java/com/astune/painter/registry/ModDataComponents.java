@@ -36,4 +36,34 @@ public class ModDataComponents {
                             .persistent(Codec.INT) // 使用 INT 类型的编解码器
                             .build()
             );
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Double>> BRUSH_SIZE =
+            DATA_COMPONENT_TYPES.register("brush_size",
+                    () -> DataComponentType.<Double>builder()
+                            .persistent(Codec.DOUBLE)
+                            .build());
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Float>> FEATHER_STRENGTH =
+            DATA_COMPONENT_TYPES.register("feather_strength",
+                    () -> DataComponentType.<Float>builder()
+                            .persistent(Codec.FLOAT)
+                            .build());
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> BLEND_MODE =
+            DATA_COMPONENT_TYPES.register("blend_mode",
+                    () -> DataComponentType.<String>builder()
+                            .persistent(Codec.STRING)
+                            .build());
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Double>> STEP_SIZE =
+            DATA_COMPONENT_TYPES.register("step_size",
+                    () -> DataComponentType.<Double>builder()
+                            .persistent(Codec.DOUBLE)
+                            .build());
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Float>> OPACITY =
+            DATA_COMPONENT_TYPES.register("opacity",
+                    () -> DataComponentType.<Float>builder()
+                            .persistent(Codec.FLOAT)
+                            .build());
 }

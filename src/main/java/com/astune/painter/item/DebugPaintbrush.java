@@ -1,8 +1,8 @@
 package com.astune.painter.item;
 
 import com.astune.painter.api.*;
+import com.astune.painter.client.inventory.BrushConfigScreen;
 import com.astune.painter.registry.ModDataComponents;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -26,7 +26,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
@@ -41,12 +40,17 @@ public class DebugPaintbrush extends Item implements IPaintProvider {
     private static final String COLOR_TAG = "currentColor";
     private static boolean sPickingColor = false;
     public DebugPaintbrush(Properties properties) {
-        super(properties);
-        // 将自己注册为画笔提供者
+        super(properties
+                .component(ModDataComponents.BRUSH_SIZE.get(), 1.0)
+                .component(ModDataComponents.FEATHER_STRENGTH.get(), 1.0f)
+                .component(ModDataComponents.STEP_SIZE.get(), 0.01)
+                .component(ModDataComponents.BLEND_MODE.get(), BlendMode.ADD.name())
+                .component(ModDataComponents.OPACITY.get(), 0.1f));
         PaintProviders.register(this, this);
     }
+
     public DebugPaintbrush() {
-        super(new Item.Properties());
+        this(new Item.Properties());
     }
 
     @Override
@@ -57,13 +61,59 @@ public class DebugPaintbrush extends Item implements IPaintProvider {
     @Nullable
     @Override
     public PaintPattern getPattern(ItemStack stack, Player player, Level level, BlockPos pos, Vec3 hitLoc) {
-        return new PaintPattern(1.0 , 1.0 , new PixelProvider() {
+        double diameter = stack.getOrDefault(ModDataComponents.BRUSH_SIZE.get(), 0.06);
+        float feather = stack.getOrDefault(ModDataComponents.FEATHER_STRENGTH.get(), 0.0f);
+        float opacity = stack.getOrDefault(ModDataComponents.OPACITY.get(), 1.0f);
+        BlendMode mode = BlendMode.valueOf(stack.getOrDefault(ModDataComponents.BLEND_MODE.get(), BlendMode.OVERWRITE.name()));
+        int color = getCurrentColor(stack);
+
+        if (diameter <= 0) return null;
+
+        final double radius = diameter / 2.0;
+        return new PaintPattern(diameter, diameter, new PixelProvider() {
             @Override
-            public @NotNull Integer getPixel(double dx, double dy) {
-                return getCurrentColor(stack);
+            public BlendMode getBlendMode() {
+                return mode;
+            }
+
+            @Override
+            public @Nullable Integer getPixel(double dx, double dy) {
+                // dx, dy 相对于图案左下角，计算相对于圆心的偏移
+                double cx = dx - radius;
+                double cy = dy - radius;
+                double dist = Math.sqrt(cx * cx + cy * cy);
+                if (dist > radius) return null;  // 超出圆形区域
+
+                // 羽化：根据距离圆心的比例调整透明度
+                float alphaFactor = 0.1f;
+                if (feather > 0 && radius > 0) {
+                    double ratio = dist / radius;    // 0 (圆心) → 1 (边缘)
+                    alphaFactor = opacity * (float) Math.pow(1.0 - ratio, feather);
+                }
+
+                int a = (int) (255 * alphaFactor);
+                if (a <= 0) return null;
+                int r = (color >> 16) & 0xFF;
+                int g = (color >> 8) & 0xFF;
+                int b = color & 0xFF;
+                return (a << 24) | (r << 16) | (g << 8) | b;
             }
         });
     }
+
+    @Override
+    public Double getStep() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null) {
+            ItemStack stack = mc.player.getMainHandItem();
+            if (stack.getItem() instanceof DebugPaintbrush) {
+                return stack.getOrDefault(ModDataComponents.STEP_SIZE.get(), 1/8.0);
+            }
+        }
+        return 1/8.0;
+    }
+
+
 
     private int getCurrentColor(ItemStack stack) {
         // 使用 getOrDefault，如果组件不存在则返回默认值白色(0xFFFFFFFF)
@@ -85,14 +135,15 @@ public class DebugPaintbrush extends Item implements IPaintProvider {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-        // 主手：正常使用
         if (hand == InteractionHand.MAIN_HAND) {
+            if (level.isClientSide) {
+                HitResult hit = Minecraft.getInstance().hitResult;
+                if (hit == null || hit.getType() == HitResult.Type.MISS) {
+                    Minecraft.getInstance().setScreen(new BrushConfigScreen(stack));
+                    return InteractionResultHolder.success(stack);
+                }
+            }
             return InteractionResultHolder.pass(stack);
-        }
-        // 副手：吸色
-        if (level.isClientSide && hand == InteractionHand.OFF_HAND) {
-            System.out.println("take color!");
-            pickColorClient(stack);
         }
         return InteractionResultHolder.success(stack);
     }

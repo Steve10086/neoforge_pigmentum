@@ -9,6 +9,12 @@ import javax.annotation.Nullable;
  * 返回 null 表示该位置不绘制。
  */
 public interface PixelProvider {
+    BlendMode getBlendMode();
+    default BlendMode getBlendMode(double dx, double dy){
+        return getBlendMode();
+    };
+
     @Nullable
     Integer getPixel(double dx, double dy);
+
 }
