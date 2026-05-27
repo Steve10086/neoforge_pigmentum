@@ -12,8 +12,9 @@ public class ModCreativeTabs {
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN = CREATIVE_TABS.register("main",
             () -> CreativeModeTab.builder()
                     .title(Component.translatable("itemGroup.painter"))
-                    .icon(() -> new ItemStack(ModItems.PAINTBRUSH.get()))
+                    .icon(() -> new ItemStack(ModItems.DEBUG_PAINTBRUSH.get()))
                     .displayItems((params, output) -> {
+                        output.accept(ModItems.DEBUG_PAINTBRUSH.get());
                         output.accept(ModItems.PAINTBRUSH.get());
                     })
                     .build()

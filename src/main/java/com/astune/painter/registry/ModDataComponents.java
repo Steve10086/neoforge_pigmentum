@@ -6,11 +6,14 @@ import com.mojang.serialization.Codec;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.function.Supplier;
+
+import static net.minecraft.network.codec.ByteBufCodecs.DOUBLE;
 
 public class ModDataComponents {
     public static final DeferredRegister<DataComponentType<?>> DATA_COMPONENT_TYPES =
@@ -30,40 +33,45 @@ public class ModDataComponents {
                             .networkSynchronized(ByteBufCodecs.fromCodec(BlockState.CODEC))
                             .build());
 
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> CURRENT_COLOR =
-            DATA_COMPONENT_TYPES.register("current_color",
-                    () -> DataComponentType.<Integer>builder()
-                            .persistent(Codec.INT) // 使用 INT 类型的编解码器
-                            .build()
-            );
+    // 已有的 CURRENT_COLOR，需确保有 .persistent
+    public static final Supplier<DataComponentType<Integer>> CURRENT_COLOR =
+            DATA_COMPONENT_TYPES.register("current_color", () -> DataComponentType.<Integer>builder()
+                    .persistent(Codec.INT)
+                    .networkSynchronized(ByteBufCodecs.INT)
+                    .build());
 
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Double>> BRUSH_SIZE =
-            DATA_COMPONENT_TYPES.register("brush_size",
-                    () -> DataComponentType.<Double>builder()
-                            .persistent(Codec.DOUBLE)
-                            .build());
+    // 画笔大小
+    public static final Supplier<DataComponentType<Double>> BRUSH_SIZE =
+            DATA_COMPONENT_TYPES.register("brush_size", () -> DataComponentType.<Double>builder()
+                    .persistent(Codec.DOUBLE)
+                    .networkSynchronized(ByteBufCodecs.DOUBLE)
+                    .build());
 
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Float>> FEATHER_STRENGTH =
-            DATA_COMPONENT_TYPES.register("feather_strength",
-                    () -> DataComponentType.<Float>builder()
-                            .persistent(Codec.FLOAT)
-                            .build());
+    // 羽化强度
+    public static final Supplier<DataComponentType<Float>> FEATHER_STRENGTH =
+            DATA_COMPONENT_TYPES.register("feather_strength", () -> DataComponentType.<Float>builder()
+                    .persistent(Codec.FLOAT)
+                    .networkSynchronized(ByteBufCodecs.FLOAT)
+                    .build());
 
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> BLEND_MODE =
-            DATA_COMPONENT_TYPES.register("blend_mode",
-                    () -> DataComponentType.<String>builder()
-                            .persistent(Codec.STRING)
-                            .build());
+    // 混合模式（注意：正式发布建议用 Enum Codec，String 仅作简单演示）
+    public static final Supplier<DataComponentType<String>> BLEND_MODE =
+            DATA_COMPONENT_TYPES.register("blend_mode", () -> DataComponentType.<String>builder()
+                    .persistent(Codec.STRING)
+                    .networkSynchronized(ByteBufCodecs.STRING_UTF8)
+                    .build());
 
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Double>> STEP_SIZE =
-            DATA_COMPONENT_TYPES.register("step_size",
-                    () -> DataComponentType.<Double>builder()
-                            .persistent(Codec.DOUBLE)
-                            .build());
+    // 插值步长
+    public static final Supplier<DataComponentType<Double>> STEP_SIZE =
+            DATA_COMPONENT_TYPES.register("step_size", () -> DataComponentType.<Double>builder()
+                    .persistent(Codec.DOUBLE)
+                    .networkSynchronized(ByteBufCodecs.DOUBLE)
+                    .build());
 
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Float>> OPACITY =
-            DATA_COMPONENT_TYPES.register("opacity",
-                    () -> DataComponentType.<Float>builder()
-                            .persistent(Codec.FLOAT)
-                            .build());
+    // 透明度
+    public static final Supplier<DataComponentType<Float>> OPACITY =
+            DATA_COMPONENT_TYPES.register("opacity", () -> DataComponentType.<Float>builder()
+                    .persistent(Codec.FLOAT)
+                    .networkSynchronized(ByteBufCodecs.FLOAT)
+                    .build());
 }

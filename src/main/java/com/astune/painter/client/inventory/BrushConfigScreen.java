@@ -1,13 +1,25 @@
 package com.astune.painter.client.inventory;
 
 import com.astune.painter.api.BlendMode;
+import com.astune.painter.network.ItemSyncPacket;
 import com.astune.painter.registry.ModDataComponents;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
+import net.minecraft.network.protocol.game.ServerboundContainerSlotStateChangedPacket;
+import net.minecraft.network.protocol.game.ServerboundPickItemPacket;
+import net.minecraft.network.protocol.game.ServerboundRenameItemPacket;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.items.StackCopySlot;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Consumer;
@@ -19,6 +31,11 @@ public class BrushConfigScreen extends Screen {
         // 标题改为可翻译
         super(Component.translatable("painter.config.title"));
         this.brushStack = stack;
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
     }
 
     @Override
@@ -96,6 +113,18 @@ public class BrushConfigScreen extends Screen {
     public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         super.render(graphics, mouseX, mouseY, delta);
         graphics.drawCenteredString(font, title, this.width / 2, 15, 0xFFFFFF);
+    }
+
+    @Override
+    public void removed() {
+        super.removed();
+        if (minecraft != null && minecraft.player != null) {
+            syncBrushToServer();
+        }
+    }
+    private void syncBrushToServer() {
+        int slot = minecraft.player.getInventory().selected;
+        PacketDistributor.sendToServer(new ItemSyncPacket(slot, brushStack));
     }
 
     /** 根据 BlendMode 枚举生成对应的翻译 key */

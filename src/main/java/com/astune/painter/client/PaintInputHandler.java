@@ -399,7 +399,7 @@ public class PaintInputHandler {
     @SubscribeEvent
     public static void onMouseReleased(InputEvent.MouseButton.Pre event) {
         if (!pendingCanvasRequests.isEmpty()) {
-            System.out.println(pendingCanvasRequests.size() + " new updates!");
+            //System.out.println(pendingCanvasRequests.size() + " new updates!");
             for (BlockPos pos : pendingCanvasRequests) {
                 BlockEntity be = Minecraft.getInstance().level.getBlockEntity(pos);
                     if (be instanceof CanvasDataHolder holder) {

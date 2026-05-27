@@ -13,6 +13,7 @@
   "itemGroup.painter": "绘画",
   "block.painter.canvas": "画布方块",
   "item.painter.debug_paintbrush": "调试画笔",
+  "item.painter.paintbrush": "画笔",
   "item.painter.canvas": "画布方块",
 
   "painter.config.title": "画笔配置",
@@ -21,6 +22,14 @@
   "painter.config.feather": "羽化: %s",
   "painter.config.blend_mode": "模式: %s",
   "painter.config.step_size": "步长: %s",
+
+  "painter.tooltip.color": "颜色: %s",
+  "painter.tooltip.brush_size": "大小: %s",
+  "painter.tooltip.feather": "羽化: %s",
+  "painter.tooltip.blend_mode": "混合模式: %s",
+  "painter.tooltip.step_size": "步长: %s",
+  "painter.tooltip.opacity": "透明度: %s",
+
 
   "painter.blend_mode.overwrite": "覆盖",
   "painter.blend_mode.add": "叠加",

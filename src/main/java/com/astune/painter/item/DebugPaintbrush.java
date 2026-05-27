@@ -2,7 +2,9 @@ package com.astune.painter.item;
 
 import com.astune.painter.api.*;
 import com.astune.painter.client.inventory.BrushConfigScreen;
+import com.astune.painter.network.ItemSyncPacket;
 import com.astune.painter.registry.ModDataComponents;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -26,6 +28,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
@@ -37,7 +40,6 @@ import java.util.List;
 import static com.astune.painter.client.ClientSetup.KEY_PICK_COLOR;
 
 public class DebugPaintbrush extends Item implements IPaintProvider {
-    private static final String COLOR_TAG = "currentColor";
     private static boolean sPickingColor = false;
     public DebugPaintbrush(Properties properties) {
         super(properties
@@ -50,7 +52,7 @@ public class DebugPaintbrush extends Item implements IPaintProvider {
     }
 
     public DebugPaintbrush() {
-        this(new Item.Properties());
+        super(new Item.Properties());
     }
 
     @Override
@@ -128,15 +130,39 @@ public class DebugPaintbrush extends Item implements IPaintProvider {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+        // 显示当前颜色
         int color = getCurrentColor(stack);
-        tooltip.add(Component.literal("Color: #" + Integer.toHexString(color).toUpperCase()));
+        String hex = String.format("#%06X", color & 0x00FFFFFF);
+        tooltip.add(Component.translatable("painter.tooltip.color", hex)
+                .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(color & 0x00FFFFFF))));
+
+        // 显示画笔大小（世界坐标单位）
+        double brushSize = stack.getOrDefault(ModDataComponents.BRUSH_SIZE.get(), 0.0625);
+        tooltip.add(Component.translatable("painter.tooltip.brush_size", String.format("%.2f", brushSize)));
+
+        // 羽化强度
+        float feather = stack.getOrDefault(ModDataComponents.FEATHER_STRENGTH.get(), 0.0f);
+        tooltip.add(Component.translatable("painter.tooltip.feather", String.format("%.1f", feather * 100) + "%"));
+
+        // 混合模式
+        String blendMode = stack.getOrDefault(ModDataComponents.BLEND_MODE.get(), "overwrite");
+        tooltip.add(Component.translatable("painter.tooltip.blend_mode",
+                Component.translatable("painter.blend_mode." + blendMode)));
+
+        // 步长
+        double stepSize = stack.getOrDefault(ModDataComponents.STEP_SIZE.get(), 0.01);
+        tooltip.add(Component.translatable("painter.tooltip.step_size", String.format("%.3f", stepSize)));
+
+        // 透明度
+        float opacity = stack.getOrDefault(ModDataComponents.OPACITY.get(), 1.0f);
+        tooltip.add(Component.translatable("painter.tooltip.opacity", String.format("%.0f%%", opacity * 100)));
     }
 
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (hand == InteractionHand.MAIN_HAND) {
-            if (level.isClientSide) {
+            if (level.isClientSide && player.isShiftKeyDown()) {
                 HitResult hit = Minecraft.getInstance().hitResult;
                 if (hit == null || hit.getType() == HitResult.Type.MISS) {
                     Minecraft.getInstance().setScreen(new BrushConfigScreen(stack));
@@ -164,7 +190,8 @@ public class DebugPaintbrush extends Item implements IPaintProvider {
         if (color != 0) {
             setCurrentColor(stack, color);
             String hex = String.format("#%06X", color & 0x00FFFFFF);
-            Component name = Component.literal("Debug Paintbrush (" + hex + ")")
+            Component name = Component.translatable(stack.getItem().getDescriptionId())
+                    .append(Component.literal(" (#" + hex + ")"))
                     .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(color & 0x00FFFFFF)));
             stack.set(DataComponents.CUSTOM_NAME, name);
 
@@ -253,9 +280,10 @@ public class DebugPaintbrush extends Item implements IPaintProvider {
 
             if (sPickingColor && !KEY_PICK_COLOR.isDown()){
                 ItemStack brush = mc.player.getMainHandItem();
+                int slot = mc.player.getInventory().selected;
                 if (brush.getItem() instanceof DebugPaintbrush) {
-
-                    sPickingColor = false;     // 设置标志，准备拦截下一帧的准星渲染
+                    PacketDistributor.sendToServer(new ItemSyncPacket(slot, brush));
+                    sPickingColor = false;
                 }
             }
         }

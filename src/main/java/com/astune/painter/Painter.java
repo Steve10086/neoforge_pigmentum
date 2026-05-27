@@ -4,6 +4,7 @@ import com.astune.painter.api.render.CanvasRendererRegistry;
 import com.astune.painter.client.CanvasRenderEventHandler;
 import com.astune.painter.client.DefaultCanvasPixelRenderer;
 import com.astune.painter.network.CanvasUploadPacket;
+import com.astune.painter.network.ItemSyncPacket;
 import com.astune.painter.network.SyncCanvasPacket;
 import com.astune.painter.registry.*;
 import com.mojang.logging.LogUtils;
@@ -110,6 +111,7 @@ public class Painter {
         final PayloadRegistrar registrar = event.registrar(MODID);
         registrar.playToClient(SyncCanvasPacket.TYPE, SyncCanvasPacket.STREAM_CODEC, SyncCanvasPacket::handleClient);
         registrar.playToServer(CanvasUploadPacket.TYPE, CanvasUploadPacket.STREAM_CODEC, CanvasUploadPacket::handleServer);
+        registrar.playToServer(ItemSyncPacket.TYPE, ItemSyncPacket.STREAM_CODEC, ItemSyncPacket::handleItemSync);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
