@@ -1,7 +1,5 @@
 package com.astune.painter.api.render;
 
-import com.astune.painter.client.DefaultCanvasPixelRenderer;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;

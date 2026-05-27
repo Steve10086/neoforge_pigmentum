@@ -122,4 +122,19 @@ public class PixelMatrix implements IPixelMatrix{
                     }
                 }
             };
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof PixelMatrix that)) return false;
+        return width == that.width && height == that.height && Arrays.equals(pixels, that.pixels);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Integer.hashCode(width);
+        result = 31 * result + Integer.hashCode(height);
+        result = 31 * result + Arrays.hashCode(pixels);
+        return result;
+    }
 }

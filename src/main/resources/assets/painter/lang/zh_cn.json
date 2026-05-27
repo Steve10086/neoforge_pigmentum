@@ -14,6 +14,7 @@
   "block.painter.canvas": "画布方块",
   "item.painter.debug_paintbrush": "调试画笔",
   "item.painter.paintbrush": "画笔",
+  "item.painter.canvas_sheet": "画布",
   "item.painter.canvas": "画布方块",
 
   "painter.config.title": "画笔配置",

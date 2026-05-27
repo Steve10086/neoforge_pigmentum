@@ -26,6 +26,10 @@ public class CanvasTextureManager {
         imageProvider = provider != null ? provider : new DefaultCanvasImageProvider();
     }
 
+    public static NativeImage createImage(CanvasFace face) {
+        return imageProvider.createImage(face);
+    }
+
     /**
      * 生成或更新指定实体某个方向的画布纹理。
      * @param entityId 客户端侧 CanvasBlockEntity 的唯一 ID

@@ -42,7 +42,7 @@ import static com.astune.painter.client.ClientSetup.KEY_PICK_COLOR;
 public class DebugPaintbrush extends Item implements IPaintProvider {
     private static boolean sPickingColor = false;
     public DebugPaintbrush(Properties properties) {
-        super(properties
+        super(properties.stacksTo(1)
                 .component(ModDataComponents.BRUSH_SIZE.get(), 1.0)
                 .component(ModDataComponents.FEATHER_STRENGTH.get(), 1.0f)
                 .component(ModDataComponents.STEP_SIZE.get(), 0.01)

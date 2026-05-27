@@ -249,4 +249,27 @@ public class CanvasFace {
                 center.add(right.scale(-hw)).add(up.scale( hh))  // 左上
         };
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof CanvasFace that)) return false;
+        return primaryFace == that.primaryFace &&
+                corner0.equals(that.corner0) &&
+                corner1.equals(that.corner1) &&
+                corner2.equals(that.corner2) &&
+                corner3.equals(that.corner3) &&
+                pixels.equals(that.pixels);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = primaryFace.hashCode();
+        result = 31 * result + corner0.hashCode();
+        result = 31 * result + corner1.hashCode();
+        result = 31 * result + corner2.hashCode();
+        result = 31 * result + corner3.hashCode();
+        result = 31 * result + pixels.hashCode();
+        return result;
+    }
 }

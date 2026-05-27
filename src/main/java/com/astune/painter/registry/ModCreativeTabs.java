@@ -16,6 +16,7 @@ public class ModCreativeTabs {
                     .displayItems((params, output) -> {
                         output.accept(ModItems.DEBUG_PAINTBRUSH.get());
                         output.accept(ModItems.PAINTBRUSH.get());
+                        output.accept(ModItems.CANVAS_SHEET.get());
                     })
                     .build()
     );

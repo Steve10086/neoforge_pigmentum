@@ -1,6 +1,7 @@
 package com.astune.painter.registry;
 
 import com.astune.painter.block.CanvasBlockItem;
+import com.astune.painter.item.CanvasSheet;
 import com.astune.painter.item.DebugPaintbrush;
 import com.astune.painter.item.Paintbrush;
 import net.minecraft.core.registries.Registries;
@@ -9,6 +10,8 @@ import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+
+import java.util.function.Supplier;
 
 import static com.astune.painter.api.BlendMode.ADD;
 
@@ -37,6 +40,10 @@ public class ModItems {
                     .component(ModDataComponents.OPACITY.get(), 1.0f)
             )
     );
+
+    public static final Supplier<Item> CANVAS_SHEET = ITEMS.register("canvas_sheet",
+            () -> new CanvasSheet(new Item.Properties().stacksTo(1)));
+
     public static final DeferredHolder<Item, BlockItem> CANVAS_NO_OCCLUSION_ITEM =
             ITEMS.register("canvas_no_occlusion",
                     () -> new CanvasBlockItem(ModBlocks.CANVAS_NO_OCCLUSION.get(), new Item.Properties()));

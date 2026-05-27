@@ -1,4 +1,4 @@
-package com.astune.painter.client;
+package com.astune.painter.api.render;
 
 import com.astune.painter.api.render.CanvasPixelRenderer;
 import com.astune.painter.api.render.RenderContext;

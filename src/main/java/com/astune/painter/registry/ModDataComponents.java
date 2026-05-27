@@ -2,6 +2,7 @@ package com.astune.painter.registry;
 
 import com.astune.painter.Painter;
 import com.astune.painter.api.CanvasData;
+import com.astune.painter.api.CanvasFace;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
@@ -74,4 +75,16 @@ public class ModDataComponents {
                     .persistent(Codec.FLOAT)
                     .networkSynchronized(ByteBufCodecs.FLOAT)
                     .build());
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<CanvasFace>> STORED_FACE =
+            DATA_COMPONENT_TYPES.register("stored_face",
+                    () -> DataComponentType.<CanvasFace>builder()
+                            .persistent(CanvasFace.CODEC)
+                            .build());
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> CANVAS_TEXTURE =
+            DATA_COMPONENT_TYPES.register("canvas_texture",
+                    () -> DataComponentType.<String>builder()
+                            .persistent(Codec.STRING)
+                            .build());
 }
