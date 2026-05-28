@@ -71,6 +71,11 @@ public abstract class LevelMixin {
 
         // ⚡ 关键判断：新状态是否和当前 mimickedState 同一种方块
         if (newState.is(mimicked.getBlock())) {
+            if (newState.equals(mimicked)) {
+                cir.setReturnValue(false);
+                return;
+            }
+
             canvasBE.setMimickedState(newState);
             //System.out.println("[LevelMixin] setblock triggered!, new state = " + newState);
 

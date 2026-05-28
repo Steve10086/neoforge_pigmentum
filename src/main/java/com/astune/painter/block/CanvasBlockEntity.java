@@ -26,6 +26,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class CanvasBlockEntity extends BlockEntity {
 
+    public static final ThreadLocal<Boolean> SUPPRESS_UPDATE = ThreadLocal.withInitial(() -> false);
     @Nullable
     private BlockState mimickedState;
     public CanvasBlockEntity(BlockPos pos, BlockState blockState) {
@@ -33,6 +34,7 @@ public class CanvasBlockEntity extends BlockEntity {
     }
 
     public void setMimickedState(BlockState state) {
+        if (state.equals(this.mimickedState)) return;
         int oldLight = mimickedState != null ? mimickedState.getLightEmission(level, worldPosition) : 0;
         this.mimickedState = state;
         setChanged();

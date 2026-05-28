@@ -25,7 +25,7 @@ public class PainterClient {
     @SubscribeEvent
     static void onClientSetup(FMLClientSetupEvent event) {
         // Some client setup code
-        Painter.LOGGER.info("HELLO FROM CLIENT SETUP");
-        Painter.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
+        //Painter.LOGGER.info("HELLO FROM CLIENT SETUP");
+        //Painter.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
     }
 }
