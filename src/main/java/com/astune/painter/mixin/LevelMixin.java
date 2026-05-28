@@ -67,10 +67,12 @@ public abstract class LevelMixin {
                 ClientPistonCache.storeCanvasTexture(pos, texture);
             }
         }
+        //System.out.println("[LevelMixin] setblock check, " + oldState + "to" + newState);
 
         // ⚡ 关键判断：新状态是否和当前 mimickedState 同一种方块
         if (newState.is(mimicked.getBlock())) {
             canvasBE.setMimickedState(newState);
+            //System.out.println("[LevelMixin] setblock triggered!, new state = " + newState);
 
             if (!self.isClientSide) {
                 // 发送实体同步包

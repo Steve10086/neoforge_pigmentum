@@ -185,8 +185,7 @@ public abstract class CanvasBlock extends Block implements EntityBlock {
         if (mimicked == null) return;
 
         try {
-            mimicked.getBlock();
-            Method method = mimicked.getBlock().getClass().getMethod(
+            Method method = mimicked.getBlock().getClass().getDeclaredMethod(
                     "neighborChanged",
                     BlockState.class, Level.class, BlockPos.class,
                     Block.class, BlockPos.class, boolean.class

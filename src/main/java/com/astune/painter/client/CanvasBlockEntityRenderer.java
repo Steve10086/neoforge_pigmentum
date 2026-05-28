@@ -52,7 +52,7 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
         Level level = be.getLevel();
         if (level == null) return;
         BlockPos pos = be.getBlockPos();
-        boolean occlusion = (be.getBlockState().getBlock() instanceof OcclusionCanvasBlock);
+        boolean occlusion = (be.getBlockState().getBlock() instanceof OcclusionCanvasBlock || be.getBlockState().isSolidRender(level, pos));
 
         poseStack.pushPose();
         poseStack.translate(0.5, 0.5, 0.5);
