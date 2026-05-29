@@ -25,8 +25,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 public class CanvasBlockEntity extends BlockEntity {
-
-    public static final ThreadLocal<Boolean> SUPPRESS_UPDATE = ThreadLocal.withInitial(() -> false);
     @Nullable
     private BlockState mimickedState;
     public CanvasBlockEntity(BlockPos pos, BlockState blockState) {

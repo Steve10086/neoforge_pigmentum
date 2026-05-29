@@ -1,4 +1,4 @@
-# 🎨 Painter - Minecraft 画布模组
+# 🎨 Pigmentum - Minecraft 画布模组
 
 一个 NeoForge 1.21.1 的底层画布 API 模组，允许玩家将任意方块表面变为可绘制的画布，支持像素级绘制、红石交互、活塞推动，并提供完整的扩展 API 供第三方模组自定义渲染和绘制行为。
 
