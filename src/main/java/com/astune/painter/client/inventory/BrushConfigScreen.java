@@ -3,22 +3,12 @@ package com.astune.painter.client.inventory;
 import com.astune.painter.api.BlendMode;
 import com.astune.painter.network.ItemSyncPacket;
 import com.astune.painter.registry.ModDataComponents;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
-import net.minecraft.network.protocol.game.ServerboundContainerSlotStateChangedPacket;
-import net.minecraft.network.protocol.game.ServerboundPickItemPacket;
-import net.minecraft.network.protocol.game.ServerboundRenameItemPacket;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.ClickType;
-import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.items.StackCopySlot;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 
@@ -87,7 +77,12 @@ public class BrushConfigScreen extends Screen {
                         Component.translatable(blendModeKey(currentMode))),
                 btn -> {
                     BlendMode[] values = BlendMode.values();
-                    BlendMode next = values[(currentMode.ordinal() + 1) % values.length];
+                    BlendMode next = values[
+                            (BlendMode.valueOf(
+                                    brushStack.getOrDefault(
+                                            ModDataComponents.BLEND_MODE.get(),
+                                            BlendMode.OVERWRITE.name()))
+                                    .ordinal() + 1) % values.length];
                     brushStack.set(ModDataComponents.BLEND_MODE.get(), next.name());
                     btn.setMessage(Component.translatable("painter.config.blend_mode",
                             Component.translatable(blendModeKey(next))));
