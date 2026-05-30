@@ -106,6 +106,7 @@ CanvasTextureManager.setImageProvider(new CanvasImageProvider() {
     }
 });
 ```
+对于希望扩展 Pigmentum 或创建自定义画笔、渲染器和效果的开发者，请参阅 [Pigmentum API 文档](./API.md)。
 
 ---
 
@@ -121,4 +122,8 @@ MIT License
 
 ---
 
-*Painter Mod - 让 Minecraft 的每一面都成为画布。*
+*Pigmentum Mod - 让 Minecraft 的每一面都成为画布。*
+
+---
+
+_**此mod包含许多ai生成代码，虽经过作者校验，但是因为作者本身mod经验较浅，无法保证实现方式和实际效率，欢迎issues反馈**_
