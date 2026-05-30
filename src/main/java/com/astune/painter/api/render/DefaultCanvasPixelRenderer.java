@@ -12,6 +12,13 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 public class DefaultCanvasPixelRenderer implements CanvasPixelRenderer {
+
+    @Override
+    public boolean canRender(RenderContext context){
+        //System.out.println(context);
+        return !(context.texture == null || !context.texture.getPath().contains("_default_"));
+    }
+
     @Override
     public boolean renderFace(RenderContext context) {
         var face = context.face;

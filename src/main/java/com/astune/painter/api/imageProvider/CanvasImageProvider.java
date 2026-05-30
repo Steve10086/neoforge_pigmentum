@@ -13,6 +13,6 @@ public interface CanvasImageProvider {
     NativeImage createImage(CanvasFace face);
 
     default String name(){
-        return "DEFAULT";
+        return "default";
     }
 }

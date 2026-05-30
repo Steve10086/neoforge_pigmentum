@@ -286,7 +286,7 @@ public class GlowBrush implements IPaintProvider {
 
 ```java
 public class GlowImageProvider implements CanvasImageProvider {
-    public static String NAME = "GLOW:GLOW";
+    public static String NAME = "glow";
     
     @Override
     public NativeImage createImage(CanvasFace face) {
@@ -324,26 +324,20 @@ CanvasTextureManager.addImageProvider(new GlowImageProvider());
 ```java
 CanvasRendererRegistry.registerPixelRenderer(new CanvasPixelRenderer() {
     @Override
+    public boolean canRender(RenderContext context){
+        return !(context.texture == null || !context.texture.getPath().contains("_glow_"));
+    }
+    
+    @Override
     public boolean renderFace(RenderContext context) {
-        // 基础纹理由默认渲染器负责，这里我们只叠加发光层
-        ResourcesBundle bundle = context.blockEntity().getTextureBundle(); // 假设从 BlockEntity 取得
-        if (bundle == null || bundle.resourceLocations().length < 2) return false;
-
-        // 发光纹理
-        ResourceLocation glowTexture = null;
-        
-        for (var res : bundle.resourceLocations()){
-            if (res.getNameSpace().contains(GlowImageProvider.NAME)){
-                glowTexture = res;
-                break;
-            }
-        }
+        var face = context.face;
+        var texture = context.texture;
+        if (texture == null) return false;
 
         // 使用满亮度渲染
         int fullBright = 0x00F000F0;
         // ... 执行四边形绘制，应用 glowTexture 和 fullBright ...
-        // 返回值取决于是否希望完全接管渲染。如果仅叠加，返回 false 让默认渲染器继续。
-        return false;
+        return true;
     }
 }, 10);
 ```
