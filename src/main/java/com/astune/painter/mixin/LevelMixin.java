@@ -2,6 +2,7 @@ package com.astune.painter.mixin;
 
 import com.astune.painter.api.CanvasDataHolder;
 import com.astune.painter.api.CanvasFace;
+import com.astune.painter.api.ResourcesBundle;
 import com.astune.painter.block.CanvasBlock;
 import com.astune.painter.block.CanvasBlockEntity;
 import com.astune.painter.client.ClientPistonCache;
@@ -61,7 +62,7 @@ public abstract class LevelMixin {
         if (self.isClientSide && (flags == 68 || flags == 82)){
             CompoundTag data = be.saveWithoutMetadata(self.registryAccess());
             ClientPistonCache.store(pos, data);
-            List<Pair<CanvasFace, ResourceLocation>> texture = ((CanvasDataHolder) be).painter$getCachedFaceTextures();
+            List<Pair<CanvasFace, ResourcesBundle>> texture = ((CanvasDataHolder) be).painter$getCachedFaceTextures();
             //System.out.println("[LevelMixin] Piston triggered! textures = " + texture);
             if (texture != null){
                 ClientPistonCache.storeCanvasTexture(pos, texture);

@@ -3,6 +3,7 @@ package com.astune.painter.client;
 import com.astune.painter.api.CanvasData;
 import com.astune.painter.api.CanvasDataHolder;
 import com.astune.painter.api.CanvasFace;
+import com.astune.painter.api.ResourcesBundle;
 import com.astune.painter.api.render.CanvasPixelRenderer;
 import com.astune.painter.api.render.CanvasRendererRegistry;
 import com.astune.painter.api.render.RenderContext;
@@ -34,7 +35,7 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
     @Override
     public void render(BlockEntity be, float partialTick, PoseStack poseStack,
                        MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
-        List<Pair<CanvasFace, ResourceLocation>> textures = null;
+        List<Pair<CanvasFace, ResourcesBundle>> textures = null;
         if (be instanceof CanvasDataHolder holder) {
             textures = holder.painter$getCachedFaceTextures();
             if (textures == null) {
@@ -64,11 +65,11 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
 
     public static void renderCanvasTexture(Level level, BlockPos pos, PoseStack poseStack,
                                            MultiBufferSource bufferSource,
-                                           List<Pair<CanvasFace, ResourceLocation>> textures,
+                                           List<Pair<CanvasFace, ResourcesBundle>> textures,
                                            int packedLight, int packedOverlay, boolean isOcclusion) {
         for (var pair : textures) {
             CanvasFace face = pair.getFirst();
-            ResourceLocation tex = pair.getSecond();
+            ResourcesBundle tex = pair.getSecond();
             if (tex == null) continue;
 
             // 处理光照
@@ -76,12 +77,13 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
             if (isOcclusion) {
                 faceLight = getNeighborLight(level, pos, face.primaryFace());
             }
+            for (var t : tex.resourceLocations()){
+                RenderContext context = new RenderContext(face, t, poseStack, bufferSource,
+                        faceLight, packedOverlay, level, pos, isOcclusion);
 
-            RenderContext context = new RenderContext(face, tex, poseStack, bufferSource,
-                    faceLight, packedOverlay, level, pos, isOcclusion);
-
-            CanvasPixelRenderer renderer = CanvasRendererRegistry.resolve(context);
-            renderer.renderFace(context);  // 总是处理，默认实现保证 true
+                CanvasPixelRenderer renderer = CanvasRendererRegistry.resolve(context);
+                renderer.renderFace(context);  // 总是处理，默认实现保证 true
+            }
         }
     }
 

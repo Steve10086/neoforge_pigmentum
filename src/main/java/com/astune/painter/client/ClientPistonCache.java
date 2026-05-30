@@ -1,9 +1,11 @@
 package com.astune.painter.client;
 
 import com.astune.painter.api.CanvasFace;
+import com.astune.painter.api.ResourcesBundle;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.BundlerInfo;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -19,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @OnlyIn(Dist.CLIENT)
 public class ClientPistonCache {
     private static final Map<BlockPos, CompoundTag> DATA_COPY = new ConcurrentHashMap<>();
-    private static final Map<BlockPos, Pair<List<Pair<CanvasFace, ResourceLocation>>, Integer>> TEXTURE_CACHE = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, Pair<List<Pair<CanvasFace, ResourcesBundle>>, Integer>> TEXTURE_CACHE = new ConcurrentHashMap<>();
 
     public static void store(BlockPos oldPos, CompoundTag data) {
         //System.out.println("[CanvasPistonDataCache] Saving data to " + oldPos);
@@ -29,20 +31,19 @@ public class ClientPistonCache {
         TextureCleaner.addDelayedTask(20, () -> remove(oldPos));
     }
 
-    public static void storeCanvasTexture(BlockPos oldPos, List<Pair<CanvasFace, ResourceLocation>> textures){
+    public static void storeCanvasTexture(BlockPos oldPos, List<Pair<CanvasFace, ResourcesBundle>> textures){
         if (textures != null && !textures.isEmpty()) {
 
-            Pair<List<Pair<CanvasFace, ResourceLocation>>, Integer> oldTex = TEXTURE_CACHE.remove(oldPos);
+            Pair<List<Pair<CanvasFace, ResourcesBundle>>, Integer> oldTex = TEXTURE_CACHE.remove(oldPos);
             if (oldTex != null){
                 CanvasTextureManager.releaseTextures(oldTex.getSecond());
             }
-
             //System.out.println("[CanvasPistonDataCache] Saving data to " + oldPos);
-            List<Pair<CanvasFace, ResourceLocation>> newT = new ArrayList<>();
+            List<Pair<CanvasFace, ResourcesBundle>> newT = new ArrayList<>();
             int id = CanvasTextureManager.NEXT_TEXTURE_ID++;
-            for (Pair<CanvasFace, ResourceLocation> p : textures){
+            for (Pair<CanvasFace, ResourcesBundle> p : textures){
                 CanvasFace face = p.getFirst();
-                ResourceLocation tex = CanvasTextureManager.getOrUpdateTexture(face, id, textures.indexOf(p));
+                ResourcesBundle tex = CanvasTextureManager.createOrUpdateTexture(face, id, textures.indexOf(p));
                 newT.add(new Pair<>(face, tex));
             }
             TEXTURE_CACHE.put(oldPos.immutable(), new Pair<>(newT, id));
@@ -53,7 +54,7 @@ public class ClientPistonCache {
         return DATA_COPY.get(pos);
     }
 
-    public static List<Pair<CanvasFace, ResourceLocation>> getCanvasTexture(BlockPos pos) {
+    public static List<Pair<CanvasFace, ResourcesBundle>> getCanvasTexture(BlockPos pos) {
         //System.out.println("[CanvasPistonDataCache] Loading data from " + pos);
         if (TEXTURE_CACHE.get(pos) != null) return TEXTURE_CACHE.get(pos).getFirst();
         return null;
@@ -62,7 +63,7 @@ public class ClientPistonCache {
     public static void remove(BlockPos pos){
         //System.out.println("remove " + pos);
         DATA_COPY.remove(pos.immutable());
-        Pair<List<Pair<CanvasFace, ResourceLocation>>, Integer> oldTex = TEXTURE_CACHE.remove(pos);
+        Pair<List<Pair<CanvasFace, ResourcesBundle>>, Integer> oldTex = TEXTURE_CACHE.remove(pos);
         if (oldTex != null){
             CanvasTextureManager.releaseTextures(oldTex.getSecond());
         }

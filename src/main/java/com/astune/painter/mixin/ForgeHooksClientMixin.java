@@ -1,6 +1,7 @@
 package com.astune.painter.mixin;
 
 import com.astune.painter.api.CanvasFace;
+import com.astune.painter.api.ResourcesBundle;
 import com.astune.painter.block.CanvasBlock;
 import com.astune.painter.client.CanvasBlockEntityRenderer;
 import com.astune.painter.client.ClientPistonCache;
@@ -52,7 +53,7 @@ public class ForgeHooksClientMixin {
                 blockRenderer.getModelRenderer().tesselateBlock(level, model, state, pos, stack, vertexConsumer, checkSides, RandomSource.create(), state.getSeed(pos), packedOverlay, ModelData.EMPTY, renderType);
             }
         }
-        List<Pair<CanvasFace, ResourceLocation>> texture = ClientPistonCache.getCanvasTexture(pos);
+        List<Pair<CanvasFace, ResourcesBundle>> texture = ClientPistonCache.getCanvasTexture(pos);
         if (texture != null){
             //System.out.println("get textures");
             stack.pushPose();

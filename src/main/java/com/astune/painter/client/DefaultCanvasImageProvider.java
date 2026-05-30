@@ -1,7 +1,7 @@
 package com.astune.painter.client;
 
 import com.astune.painter.api.CanvasFace;
-import com.astune.painter.api.CanvasImageProvider;
+import com.astune.painter.api.imageProvider.CanvasImageProvider;
 import com.astune.painter.api.PixelMatrix;
 import com.mojang.blaze3d.platform.NativeImage;
 

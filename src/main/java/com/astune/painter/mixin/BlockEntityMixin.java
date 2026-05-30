@@ -3,20 +3,14 @@ package com.astune.painter.mixin;
 import com.astune.painter.api.CanvasData;
 import com.astune.painter.api.CanvasDataHolder;
 import com.astune.painter.api.CanvasFace;
+import com.astune.painter.api.ResourcesBundle;
 import com.astune.painter.client.CanvasTextureManager;
 import com.astune.painter.network.ClientCanvasCache;
-import com.astune.painter.registry.ModDataComponents;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.component.DataComponentMap;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtOps;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -43,7 +37,7 @@ public abstract class BlockEntityMixin implements CanvasDataHolder {
 
     @Unique
     @Nullable
-    private List<Pair<CanvasFace, ResourceLocation>> painter$cachedFaceTextures;
+    private List<Pair<CanvasFace, ResourcesBundle>> painter$cachedFaceTextures;
 
 
     @Inject(method = "setRemoved", at = @At("HEAD"))
@@ -58,7 +52,7 @@ public abstract class BlockEntityMixin implements CanvasDataHolder {
     }
 
     @Override
-    public List<Pair<CanvasFace, ResourceLocation>> painter$getCachedFaceTextures() {
+    public List<Pair<CanvasFace, ResourcesBundle>> painter$getCachedFaceTextures() {
         return painter$cachedFaceTextures;
     }
 
@@ -78,12 +72,12 @@ public abstract class BlockEntityMixin implements CanvasDataHolder {
 
         //System.out.println("regenerate !");
 
-        List<Pair<CanvasFace, ResourceLocation>> newList = new ArrayList<>();
+        List<Pair<CanvasFace, ResourcesBundle>> newList = new ArrayList<>();
         int faceIndex = 0;
         for (CanvasFace face : data.faces()) {
             if (face.pixels() == null || face.pixels().getWidth() <= 0 || face.pixels().getHeight() <= 0 || Arrays.stream(face.pixels().getPixels()).allMatch(a -> a == 0))
                 continue;
-            ResourceLocation tex = CanvasTextureManager.getOrUpdateTexture(face, painter$clientTextureId, faceIndex);
+            ResourcesBundle tex = CanvasTextureManager.createOrUpdateTexture(face, painter$clientTextureId, faceIndex);
             if (tex != null) {
                 newList.add(Pair.of(face, tex));
             }

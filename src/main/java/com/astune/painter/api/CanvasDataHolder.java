@@ -23,7 +23,7 @@ public interface CanvasDataHolder {
     }
 
     @Nullable
-    List<Pair<CanvasFace, ResourceLocation>> painter$getCachedFaceTextures();
+    List<Pair<CanvasFace, ResourcesBundle>> painter$getCachedFaceTextures();
 
     void painter$regenerateTextures(CanvasData data);
 

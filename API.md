@@ -99,6 +99,8 @@ public class CanvasRendererRegistry {
 public interface CanvasImageProvider {
     @Nullable
     NativeImage createImage(CanvasFace face);
+    
+    default String name();
 }
 
 public class CanvasTextureManager {
@@ -240,23 +242,9 @@ public class ModDataComponents {
 
 ---
 
-## 画布提取物品
-
-`CanvasSheet` 物品允许玩家将画布的一个面复制到物品上，并可在物品展示框中展示。
-
-```java
-public class CanvasSheet extends Item {
-    public static void ensureTexture(ItemStack stack);
-}
-```
-
-- `ensureTexture`: (仅客户端) 生成或重新生成该画布物品的动态纹理。会在需要时自动调用。
-
-当玩家潜行右击一个已绘制的方块时，被击中的面会被克隆到 `STORED_FACE` 组件中，同时生成纹理。物品存储有面数据时，其模型会自动切换到 `custom_model_data=1` 的样式。
+## 示例
 
 ---
-
-## 示例
 
 ### 注册一个自定义红色画笔
 
@@ -271,7 +259,7 @@ public static void setup(FMLCommonSetupEvent event) {
     });
 }
 ```
-
+---
 ### 使用自定义混合函数添加发光效果层
 
 ```java
@@ -292,17 +280,75 @@ public class GlowBrush implements IPaintProvider {
 }
 ```
 
+### 自定义图像提供者生成发光纹理
+
+要实现独立的发光渲染，需要将发光像素单独输出为一张纹理。创建一个 `GlowImageProvider`，它从效果层中读取发光数据，生成只包含发光信息的 `NativeImage`。将其注册为额外的图像提供者，`CanvasTextureManager` 会为每个面调用所有注册的图像提供者，生成多个纹理，存储于 `ResourcesBundle` 中。
+
+```java
+public class GlowImageProvider implements CanvasImageProvider {
+    public static String NAME = "GLOW:GLOW";
+    
+    @Override
+    public NativeImage createImage(CanvasFace face) {
+        byte[] glowLayer = face.getEffectLayer("glow");
+        if (glowLayer == null) {
+            return null;
+        }
+        int w = face.pixels().getWidth();
+        int h = face.pixels().getHeight();
+        NativeImage img = new NativeImage(w, h, false);
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                int glow = glowLayer[y * w + x] & 0xFF;
+                // 发光强度直接作为 alpha，颜色采用原像素色或白色均可，这里使用白色
+                int color = (glow << 24) | 0xFFFFFF; // ABGR 格式
+                img.setPixelRGBA(x, y, color);
+            }
+        }
+        return img;
+    }
+    @Override
+    public String name() {
+        return NAME;
+    }
+}
+
+// 在模组初始化时注册
+CanvasTextureManager.addImageProvider(new GlowImageProvider());
+```
+
 ### 自定义渲染器高亮显示发光像素
+
+默认渲染器只会使用基础画布纹理。要渲染发光层，需要实现自定义 `CanvasPixelRenderer`，从 `ResourcesBundle` 中获取发光纹理通过resource名称，并使用满亮度、无环境光遮蔽的方式叠加绘制。
 
 ```java
 CanvasRendererRegistry.registerPixelRenderer(new CanvasPixelRenderer() {
     @Override
     public boolean renderFace(RenderContext context) {
-        // 检查该面是否有发光效果，并调整光照或添加自发光通道
-        return false; // 让默认渲染器也继续执行
+        // 基础纹理由默认渲染器负责，这里我们只叠加发光层
+        ResourcesBundle bundle = context.blockEntity().getTextureBundle(); // 假设从 BlockEntity 取得
+        if (bundle == null || bundle.resourceLocations().length < 2) return false;
+
+        // 发光纹理
+        ResourceLocation glowTexture = null;
+        
+        for (var res : bundle.resourceLocations()){
+            if (res.getNameSpace().contains(GlowImageProvider.NAME)){
+                glowTexture = res;
+                break;
+            }
+        }
+
+        // 使用满亮度渲染
+        int fullBright = 0x00F000F0;
+        // ... 执行四边形绘制，应用 glowTexture 和 fullBright ...
+        // 返回值取决于是否希望完全接管渲染。如果仅叠加，返回 false 让默认渲染器继续。
+        return false;
     }
 }, 10);
 ```
+
+这样，拥有发光效果层的画布面就会额外渲染一层始终明亮的发光纹理，实现夜光或高亮效果。
 
 ---
 

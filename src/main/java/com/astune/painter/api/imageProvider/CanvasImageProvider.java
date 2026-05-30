@@ -1,5 +1,6 @@
-package com.astune.painter.api;
+package com.astune.painter.api.imageProvider;
 
+import com.astune.painter.api.CanvasFace;
 import com.mojang.blaze3d.platform.NativeImage;
 import org.jetbrains.annotations.Nullable;
 
@@ -10,4 +11,8 @@ public interface CanvasImageProvider {
      */
     @Nullable
     NativeImage createImage(CanvasFace face);
+
+    default String name(){
+        return "DEFAULT";
+    }
 }
