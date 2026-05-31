@@ -1,8 +1,10 @@
 package com.astune.painter.client;
 
 import com.astune.painter.api.CanvasFace;
-import com.astune.painter.api.imageProvider.CanvasImageProvider;
 import com.astune.painter.api.ResourcesBundle;
+import com.astune.painter.api.imageProvider.CanvasImageProvider;
+import com.astune.painter.api.imageProvider.CanvasImageProviderRegistry;
+import com.astune.painter.api.imageProvider.ImageProviderContext;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
@@ -15,23 +17,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CanvasTextureManager {
-    // 键: "entityId_directionName", 值: 当前有效的 ResourceLocation
+    // 键: "entityId_faceIndex_providerName", 值: 当前有效的 ResourceLocation
     private static final Map<String, ResourceLocation> ACTIVE = new ConcurrentHashMap<>();
     private static long COUNTER = 0;
     public static int NEXT_TEXTURE_ID = 0;
-
-    /** 可替换的纹理生成器，默认为内置实现 */
-    private static final List<CanvasImageProvider> imageProviders = new ArrayList<>(List.of(new DefaultCanvasImageProvider()));
-
-    /** 设置自定义的纹理图像生成器 */
-    public static void setImageProvider(CanvasImageProvider provider) {
-        if (provider == null) return;
-        imageProviders.add(provider);
-    }
-
-    public static boolean removeImageProvider(CanvasImageProvider provider) {
-        return imageProviders.remove(provider);
-    }
 
     public static NativeImage createImage(CanvasFace face, CanvasImageProvider provider) {
         return provider.createImage(face);
@@ -39,28 +28,34 @@ public class CanvasTextureManager {
 
     /**
      * 生成或更新指定实体某个方向的画布纹理。
+     * 通过 {@link CanvasImageProviderRegistry} 获取所有匹配的图像提供者，
+     * 每个提供者生成一张纹理，最终打包为 {@link ResourcesBundle}。
+     *
      * @param entityId 客户端侧 CanvasBlockEntity 的唯一 ID
-     * @return 新纹理的 ResourceLocation，失败返回 null
+     * @return 包含所有提供者纹理的 ResourcesBundle，若无提供者生成成功则 bundle 为空
      */
     public static ResourcesBundle createOrUpdateTexture(CanvasFace face, int entityId, int faceIndex) {
         String key = key(entityId, faceIndex);
 
         List<ResourceLocation> resources = new ArrayList<>();
 
-        for (var imageProvider : imageProviders){
-            NativeImage image = imageProvider.createImage(face);
-            if (image == null) return null;
+        ImageProviderContext ctx = new ImageProviderContext(face, null, null);
+        for (CanvasImageProvider provider : CanvasImageProviderRegistry.resolveAll(ctx)) {
+            NativeImage image = provider.createImage(face);
+            if (image == null) continue; // 单个提供者失败跳过，不影响其他
 
             long id = COUNTER++;
 
             ResourceLocation newLoc = ResourceLocation.fromNamespaceAndPath("painter",
-                    "canvas/" + key + "_" + imageProvider.name() + "_" + id);
+                    "canvas/" + key + "_" + provider.name() + "_" + id);
 
             DynamicTexture dynTex = new DynamicTexture(image);
             Minecraft.getInstance().getTextureManager().register(newLoc, dynTex);
             resources.add(newLoc);
 
-            ResourceLocation oldLoc = ACTIVE.put(key, newLoc);
+            // 按提供者名称区分 ACTIVE 键，确保每个提供者的纹理可独立追踪释放
+            String activeKey = key + "_" + provider.name();
+            ResourceLocation oldLoc = ACTIVE.put(activeKey, newLoc);
             if (oldLoc != null) {
                 RenderSystem.recordRenderCall(() -> {
                     Minecraft.getInstance().getTextureManager().release(oldLoc);
@@ -71,7 +66,7 @@ public class CanvasTextureManager {
         return new ResourcesBundle(resources.toArray(new ResourceLocation[0]));
     }
 
-    /** 释放指定实体的某个面 */
+    /** 释放指定实体的某个面（所有提供者的纹理） */
     public static void releaseTexture(int entityId, int faceIndex) {
         String key = key(entityId, faceIndex);
         ACTIVE.entrySet().removeIf(entry -> {

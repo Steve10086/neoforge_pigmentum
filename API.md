@@ -12,17 +12,19 @@
 5. [渲染上下文](#渲染上下文)
 6. [渲染器注册表](#渲染器注册表)
 7. [图像提供者](#图像提供者)
-8. [纹理管理器](#纹理管理器)
-9. [混合模式](#混合模式)
-10. [混合函数](#混合函数)
-11. [默认混合实现](#默认混合实现)
-12. [画布数据模型](#画布数据模型)
-13. [画布数据持有者](#画布数据持有者)
-14. [资源包](#资源包)
-15. [数据组件](#数据组件)
-16. [附件类型](#附件类型)
-17. [其他 API 接口](#其他-api-接口)
-18. [示例](#示例)
+8. [图像提供者上下文](#图像提供者上下文)
+9. [图像提供者注册表](#图像提供者注册表)
+10. [纹理管理器](#纹理管理器)
+11. [混合模式](#混合模式)
+12. [混合函数](#混合函数)
+13. [默认混合实现](#默认混合实现)
+14. [画布数据模型](#画布数据模型)
+15. [画布数据持有者](#画布数据持有者)
+16. [资源包](#资源包)
+17. [数据组件](#数据组件)
+18. [附件类型](#附件类型)
+19. [其他 API 接口](#其他-api-接口)
+20. [示例](#示例)
 
 ---
 
@@ -204,33 +206,83 @@ public interface CanvasImageProvider {
     default String name() {
         return "default";
     }
+
+    default boolean canProvide(ImageProviderContext context) {
+        return true;
+    }
 }
 ```
 
-- `createImage`: 根据给定的面生成 `NativeImage`。返回 `null` 表示失败，将导致 `createOrUpdateTexture` 整体返回 `null`。
+- `createImage`: 根据给定的面生成 `NativeImage`。返回 `null` 表示跳过该提供者——不影响其他提供者的纹理生成。
 - `name`: 返回此图像提供者的名称，用于纹理资源路径标识。默认返回 `"default"`。
+- `canProvide`: 判断此提供者是否可以为给定的上下文生成图像。返回 `false` 时该提供者将被跳过。用于按条件启用/禁用提供者（例如仅在特定维度生效）。
+
+默认情况下，系统预注册 `DefaultCanvasImageProvider`（`name()` 返回 `"default"`），将像素矩阵直接转换为 RGBA 纹理。
+
+---
+
+## 图像提供者上下文
+
+`ImageProviderContext` 是传入 `canProvide` 的参数，包含当前面以及可选的世界上下文。
+
+```java
+public class ImageProviderContext {
+    public final CanvasFace face;
+    @Nullable
+    public final Level level;
+    @Nullable
+    public final BlockPos pos;
+
+    public ImageProviderContext(CanvasFace face, @Nullable Level level, @Nullable BlockPos pos);
+}
+```
+
+- `face`: 当前要生成纹理的画布面。
+- `level` / `pos`: 可用于维度检测、生物群系感知等场景。当前实现中可能为 `null`。
+
+---
+
+## 图像提供者注册表
+
+所有 `CanvasImageProvider` 的注册入口，内部按优先级排序。与 `CanvasRendererRegistry`（单选）不同，此注册表收集 **所有** `canProvide` 为 true 的提供者。
+
+```java
+public class CanvasImageProviderRegistry {
+    /** 注册自定义图像提供者。优先级越高越先生成纹理 */
+    public static synchronized void register(CanvasImageProvider provider, int priority);
+
+    /** 移除一个提供者。默认提供者不可移除。返回 true 表示移除成功 */
+    public static synchronized boolean unregister(CanvasImageProvider provider);
+
+    /** 获取所有 canProvide 为 true 的提供者，按优先级降序排列，默认提供者始终在末尾 */
+    public static List<CanvasImageProvider> resolveAll(ImageProviderContext context);
+}
+```
+
+- `register`: 注册自定义提供者，默认提供者固定优先级最低（`Integer.MIN_VALUE`）。
+- `unregister`: 移除提供者。注意默认提供者不可移除。
+- `resolveAll`: 返回所有匹配提供者。`CanvasTextureManager` 调用此方法获取列表，逐个生成纹理后打包为 `ResourcesBundle`。
+
+在模组初始化时注册：
+```java
+CanvasImageProviderRegistry.register(new GlowImageProvider(), 10);
+```
 
 ---
 
 ## 纹理管理器
 
-管理画布动态纹理的创建、缓存与释放生命周期。
+管理画布动态纹理的创建、缓存与释放生命周期。**不直接持有图像提供者列表**——提供者的注册与查询由 `CanvasImageProviderRegistry` 负责。
 
 ```java
 public class CanvasTextureManager {
-    /** 追加一个图像提供者（非替换，不会移除已有提供者） */
-    public static void setImageProvider(CanvasImageProvider provider);
-
-    /** 移除一个图像提供者。返回 true 表示移除成功 */
-    public static boolean removeImageProvider(CanvasImageProvider provider);
-
     /** 使用指定提供者从面生成 NativeImage */
     public static NativeImage createImage(CanvasFace face, CanvasImageProvider provider);
 
-    /** 为指定面的所有注册图像提供者创建纹理，返回 ResourcesBundle */
+    /** 通过 CanvasImageProviderRegistry 获取所有匹配提供者，为每个生成纹理，打包为 ResourcesBundle */
     public static ResourcesBundle createOrUpdateTexture(CanvasFace face, int entityId, int faceIndex);
 
-    /** 释放指定实体的某个面的纹理 */
+    /** 释放指定实体的某个面的所有纹理 */
     public static void releaseTexture(int entityId, int faceIndex);
 
     /** 释放指定实体的所有面的纹理 */
@@ -238,11 +290,10 @@ public class CanvasTextureManager {
 }
 ```
 
-> **重要**: `setImageProvider` 的行为是**追加**到内部列表，而非替换。每个面创建纹理时会遍历**所有**已注册的图像提供者，生成多个 `ResourceLocation`，封装在 `ResourcesBundle` 中返回。传入 `null` 会被忽略（不会重置）。
+- `createOrUpdateTexture`: 创建 `ImageProviderContext`，调用 `CanvasImageProviderRegistry.resolveAll()` 获取所有匹配提供者，逐一调用 `createImage`，将结果打包为 `ResourcesBundle`。单个提供者返回 `null` 会被跳过（`continue`），不影响其他提供者。
+- `releaseTexture` / `releaseTextures`: 释放对应实体的纹理资源，调用 `Minecraft.getTextureManager().release()`。
 
 > 纹理命名遵循内部约定 `{entityId}_{faceIndex}_{providerName}_{counter}`，此格式为实现细节，不应在自定义渲染器的 `canRender()` 中硬依赖具体格式。
-
-默认情况下，内部已预注册一个 `DefaultCanvasImageProvider`（`name()` 返回 `"default"`），用于生成基础颜色纹理。
 
 ---
 
@@ -680,7 +731,7 @@ public class GlowBrush implements IPaintProvider {
 
 ### 自定义图像提供者生成发光纹理
 
-要实现独立的发光渲染，需要将发光像素单独输出为一张纹理。创建一个 `GlowImageProvider`，它从效果层中读取发光数据，生成只包含发光信息的 `NativeImage`。注册后，`CanvasTextureManager` 会为每个面调用所有已注册的图像提供者，生成多个纹理，存储于 `ResourcesBundle` 中。
+要实现独立的发光渲染，需要将发光像素单独输出为一张纹理。创建一个 `GlowImageProvider`，它从效果层中读取发光数据，生成只包含发光信息的 `NativeImage`。通过 `CanvasImageProviderRegistry` 注册后，`CanvasTextureManager` 会为每个面调用所有 `canProvide` 返回 true 的提供者，生成多个纹理，存储于 `ResourcesBundle` 中。
 
 ```java
 public class GlowImageProvider implements CanvasImageProvider {
@@ -712,8 +763,8 @@ public class GlowImageProvider implements CanvasImageProvider {
     }
 }
 
-// 在模组初始化时注册（追加到提供者列表，不会移除默认提供者）
-CanvasTextureManager.setImageProvider(new GlowImageProvider());
+// 在模组初始化时注册
+CanvasImageProviderRegistry.register(new GlowImageProvider(), 0);
 ```
 
 ---
@@ -776,8 +827,9 @@ private static void addVertex(VertexConsumer vc, PoseStack.Pose pose, Vec3 pos, 
 
 ## 最佳实践
 
-1. **纹理区分**: 在自定义渲染器的 `canRender()` 中，应通过 `CanvasImageProvider.name()` 的命名约定来识别纹理，而非硬编码 `CanvasTextureManager` 内部的路径生成格式。
+1. **纹理区分**: 在自定义渲染器的 `canRender()` 中，应通过 `CanvasImageProvider.name()` 的命名约定来识别纹理，而非硬编码内部路径生成格式。
 2. **效果层绑定**: 自定义 `BlendFunction` + `CanvasImageProvider` + `CanvasPixelRenderer` 三者通过效果层的 key（如 `"glow"`）隐式绑定，确保三端使用一致的 key 名。
 3. **委托默认行为**: 当自定义 `BlendFunction` 仅需追加效果值时，先调用 `DefaultBlendFunctions` 中的对应实现，再处理额外效果值——避免重复实现标准混合逻辑。
 4. **方块替换**: `getOrCreateCanvasFace` 内部会自动将方块替换为 `CanvasBlock`。若需在替换后执行额外逻辑，可自行调用 `calculateCanvasFace` + 手动方块操作，而非使用便捷方法。
 5. **纹理生命周期**: 自定义 `CanvasDataHolder` 实现必须正确实现 `painter$releaseTextures()`，在方块实体卸载时调用 `CanvasTextureManager.releaseTextures(entityId)`，防止显存泄漏。
+6. **注册入口**: 使用 `CanvasImageProviderRegistry.register()` 注册图像提供者，而非直接操作 `CanvasTextureManager` 的旧 API。两套注册表（渲染器 / 图像提供者）职责分明：一个负责"如何渲染"，一个负责"生成什么纹理"。

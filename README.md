@@ -99,12 +99,12 @@ CanvasRendererRegistry.registerPixelRenderer((context) -> {
 
 ### 注册自定义纹理生成
 ```java
-CanvasTextureManager.setImageProvider(new CanvasImageProvider() {
+CanvasImageProviderRegistry.register(new CanvasImageProvider() {
     @Override
     public NativeImage createImage(CanvasFace face) {
         // 自定义纹理生成逻辑
     }
-});
+}, 0);
 ```
 对于希望扩展 Pigmentum 或创建自定义画笔、渲染器和效果的开发者，请参阅 [Pigmentum API 文档](./API.md)。
 

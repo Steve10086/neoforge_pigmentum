@@ -1,11 +1,15 @@
-package com.astune.painter.client;
+package com.astune.painter.api.imageProvider;
 
 import com.astune.painter.api.CanvasFace;
-import com.astune.painter.api.imageProvider.CanvasImageProvider;
 import com.astune.painter.api.PixelMatrix;
 import com.mojang.blaze3d.platform.NativeImage;
 
 public class DefaultCanvasImageProvider implements CanvasImageProvider {
+    @Override
+    public String name() {
+        return "default";
+    }
+
     @Override
     public NativeImage createImage(CanvasFace face) {
         PixelMatrix matrix = face.pixels();
@@ -31,9 +35,8 @@ public class DefaultCanvasImageProvider implements CanvasImageProvider {
 
                     int bgr = (b << 16) | (g << 8) | r;
                     int abgr = (a << 24) | (b << 16) | (g << 8) | r;
-                    if (bgr != 0 && a == 0){
+                    if (bgr != 0 && a == 0) {
                         abgr = 255 << 24 | bgr;
-                        //System.out.println("[CanvasTextureManager] anomaly pixel detected ! " + a + "," + r + "," + g + "," + b);
                     }
                     image.setPixelRGBA(x, y, abgr);
                 }
