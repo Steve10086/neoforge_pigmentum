@@ -77,6 +77,49 @@
 
 ---
 
+## 🧩 在您的模组中依赖 Pigmentum
+
+Pigmentum 通过 **GitHub Packages** 分发。
+
+### 1. 在你的 `build.gradle` 中添加仓库和依赖
+
+```groovy
+repositories {
+    maven {
+        name = 'GitHubPackages'
+        url = uri('https://maven.pkg.github.com/Steve10086/neoforge_painter')
+        credentials {
+            username = project.findProperty('gpr.user') ?: System.getenv('GITHUB_USERNAME')
+            password = project.findProperty('gpr.token') ?: System.getenv('GITHUB_TOKEN')
+        }
+    }
+}
+
+dependencies {
+    implementation "com.astune.painter:painter:${painter_version}"
+}
+```
+
+### 2. 配置 GitHub 凭据
+
+在 `gradle.properties` 中填入你的 GitHub 凭据（**不要提交**此文件到版本控制）：
+
+```properties
+painter_version=0.5.6.4beta
+gpr.user=你的GitHub用户名
+gpr.token=ghp_xxxxxxxxxxxxxxxxxxxx
+```
+
+令牌需要 `read:packages` 权限。（GitHub Packages 即使是公开包也要求认证。）
+
+> 也可使用个人 `~/.gradle/gradle.properties` 存放 token，避免误提交。
+
+### 3. 直接下载 JAR
+
+每个 Release 的 JAR 文件会直接附加在 [Releases](https://github.com/Steve10086/neoforge_painter/releases) 页面，可手动下载放入 `mods/` 文件夹。
+
+---
+
 ## 🔧 开发者指南
 
 ### 注册自定义画笔
