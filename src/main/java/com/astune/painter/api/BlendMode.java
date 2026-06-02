@@ -10,7 +10,7 @@ public enum BlendMode {
     ERASE;
 
     public String getTranslationKey() {
-        return "painter.config.blend_mode." + this.name().toLowerCase();
+        return "painter.blend_mode." + this.name().toLowerCase();
     }
 
     public BlendFunction getDefaultFunction() {
