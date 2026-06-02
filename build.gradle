@@ -182,7 +182,6 @@ publishing {
     }
 }
 
-// Modrinth 发布配置（CI 中通过 ./gradlew modrinth 发布）
 modrinth {
     token = System.getenv("MODRINTH_TOKEN")
     projectId = "pigmentum"

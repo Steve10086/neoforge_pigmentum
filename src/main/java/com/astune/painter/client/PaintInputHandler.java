@@ -144,7 +144,7 @@ public class PaintInputHandler {
         Vec3 rightTotal = rightInWorld.scale(patternW);
         Vec3 upTotal = upInWorld.scale(patternH);
 
-        paintAt(mc, c1, rightTotal, upTotal, pixelStep, pattern.provider(), 2, normalVec);
+        paintAt(mc, c1, rightTotal, upTotal, pixelStep, pattern.provider(), provider, 2, normalVec);
 
 
 
@@ -177,7 +177,7 @@ public class PaintInputHandler {
      * @param normalVec    绘制面的法线方向（单位向量）
      */
     private static void paintAt(Minecraft mc, Vec3 c1, Vec3 rightInWorld, Vec3 upInWorld,
-                                double pixelStep, PixelProvider provider, int type, Vec3 normalVec) {
+                                double pixelStep, PixelProvider provider, IPaintProvider paintProvider, int type, Vec3 normalVec) {
         double width = rightInWorld.length();
         double height = upInWorld.length();
         if (width < pixelStep || height < pixelStep) return;
@@ -296,7 +296,7 @@ public class PaintInputHandler {
                             Integer color = provider.getPixel(x, y);
                             if (color != null) {
                                 // 获取混合函数：优先从画笔获取自定义混合，其次使用 BlendMode 枚举的默认
-                                BlendFunction blendFunc = provider instanceof IPaintProvider ip ? ip.getCustomBlendFunction(stack) : null;
+                                BlendFunction blendFunc = paintProvider instanceof IPaintProvider ip ? ip.getCustomBlendFunction(stack) : null;
                                 if (blendFunc == null) {
                                     blendFunc = provider.getBlendMode(x, y).getDefaultFunction();
                                 }
