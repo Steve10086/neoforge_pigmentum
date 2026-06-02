@@ -89,7 +89,7 @@ repositories {
 }
 
 dependencies {
-    implementation "maven.modrinth:painter:${painter_version}+neoforge"
+    implementation "maven.modrinth:pigmentum:${painter_version}+neoforge"
 }
 ```
 

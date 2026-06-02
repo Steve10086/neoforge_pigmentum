@@ -185,7 +185,7 @@ publishing {
 // Modrinth 发布配置（CI 中通过 ./gradlew modrinth 发布）
 modrinth {
     token = System.getenv("MODRINTH_TOKEN")
-    projectId = "painter"
+    projectId = "pigmentum"
     versionNumber = mod_version
     versionType = "beta"
     uploadFile = jar
