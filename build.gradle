@@ -2,6 +2,7 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'net.neoforged.moddev' version '2.0.141'
+    id 'com.modrinth.minotaur' version '2.+'
     id 'idea'
 }
 
@@ -178,16 +179,18 @@ publishing {
             name = 'LocalRepo'
             url "file://${project.projectDir}/repo"
         }
-        // GitHub Packages 远程仓库（CI 自动发布，或手动 `./gradlew publishToGitHubPackages`）
-        maven {
-            name = 'GitHubPackages'
-            url = uri('https://maven.pkg.github.com/Steve10086/neoforge_painter')
-            credentials {
-                username = project.findProperty('gpr.user') ?: System.getenv('GITHUB_ACTOR')
-                password = project.findProperty('gpr.token') ?: System.getenv('GITHUB_TOKEN')
-            }
-        }
     }
+}
+
+// Modrinth 发布配置（CI 中通过 ./gradlew modrinth 发布）
+modrinth {
+    token = System.getenv("MODRINTH_TOKEN")
+    projectId = "painter"
+    versionNumber = mod_version
+    versionType = "beta"
+    uploadFile = jar
+    gameVersions = ["1.21.1"]
+    loaders = ["neoforge"]
 }
 
 tasks.withType(JavaCompile).configureEach {
