@@ -24,11 +24,11 @@ public class CanvasImageProviderRegistry {
     }
 
     /**
-     * 注册自定义图像提供者。优先级越高越先生成纹理。
+     * 注册自定义图像提供者。优先级越高越后生成纹理，渲染时最后渲染以出现在最上层。
      */
     public static synchronized void register(CanvasImageProvider provider, int priority) {
         PROVIDERS.add(new Entry(provider, priority));
-        PROVIDERS.sort(Comparator.comparingInt(Entry::priority).reversed()); // 降序
+        PROVIDERS.sort(Comparator.comparingInt(Entry::priority)); // 升序
     }
 
     /**

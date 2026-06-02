@@ -203,7 +203,10 @@ public class CanvasFace {
      * 返回沿法线方向偏移后的四个角点（相对于方块中心）
      */
     public Vec3[] cornerWithOffset() {
-        Vec3 normal = Vec3.atLowerCornerOf(primaryFace.getNormal()).scale(OFFSET);
+        return cornerWithOffset(OFFSET);
+    }
+    public Vec3[] cornerWithOffset(double offset) {
+        Vec3 normal = Vec3.atLowerCornerOf(primaryFace.getNormal()).scale(offset);
         return new Vec3[]{
                 corner0.add(normal),
                 corner1.add(normal),

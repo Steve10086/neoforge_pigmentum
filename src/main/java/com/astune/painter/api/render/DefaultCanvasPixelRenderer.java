@@ -25,7 +25,7 @@ public class DefaultCanvasPixelRenderer implements CanvasPixelRenderer {
         var texture = context.texture;
         if (texture == null) return false;
 
-        Vec3[] corners = face.cornerWithOffset();
+        Vec3[] corners = face.cornerWithOffset(context.offset);
         VertexConsumer vc = context.bufferSource.getBuffer(RenderType.entityTranslucent(texture));
         var last = context.poseStack.last();
         Direction dir = face.primaryFace();

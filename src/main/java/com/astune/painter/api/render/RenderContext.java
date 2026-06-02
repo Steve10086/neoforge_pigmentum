@@ -17,6 +17,7 @@ public class RenderContext {
     public final Level level;
     public final BlockPos pos;
     public final boolean isOcclusion;
+    public final double offset;
 
     public RenderContext(CanvasFace face, ResourceLocation texture, PoseStack poseStack,
                          MultiBufferSource bufferSource, int packedLight, int packedOverlay,
@@ -30,5 +31,21 @@ public class RenderContext {
         this.level = level;
         this.pos = pos;
         this.isOcclusion = isOcclusion;
+        this.offset = 0.01;
+
+    }
+    public RenderContext(CanvasFace face, ResourceLocation texture, PoseStack poseStack,
+                         MultiBufferSource bufferSource, int packedLight, int packedOverlay,
+                         Level level, BlockPos pos, boolean isOcclusion, double offset) {
+        this.face = face;
+        this.texture = texture;
+        this.poseStack = poseStack;
+        this.bufferSource = bufferSource;
+        this.packedLight = packedLight;
+        this.packedOverlay = packedOverlay;
+        this.level = level;
+        this.pos = pos;
+        this.isOcclusion = isOcclusion;
+        this.offset = offset;
     }
 }

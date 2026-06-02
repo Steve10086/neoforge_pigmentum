@@ -77,10 +77,11 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
             if (isOcclusion) {
                 faceLight = getNeighborLight(level, pos, face.primaryFace());
             }
+            double offset = 0.001;
             for (var t : tex.resourceLocations()){
                 RenderContext context = new RenderContext(face, t, poseStack, bufferSource,
-                        faceLight, packedOverlay, level, pos, isOcclusion);
-
+                        faceLight, packedOverlay, level, pos, isOcclusion, offset);
+                offset += 0.001;
                 CanvasPixelRenderer renderer = CanvasRendererRegistry.resolve(context);
                 renderer.renderFace(context);  // 总是处理，默认实现保证 true
             }
