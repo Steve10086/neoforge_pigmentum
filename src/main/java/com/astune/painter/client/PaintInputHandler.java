@@ -19,6 +19,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.InputEvent;
@@ -30,6 +31,7 @@ import java.util.*;
 
 import static com.astune.painter.api.CanvasData.getOrCreateCanvasFace;
 
+@OnlyIn(Dist.CLIENT)
 @EventBusSubscriber(modid = "painter", value = Dist.CLIENT)
 public class PaintInputHandler {
 
@@ -53,7 +55,7 @@ public class PaintInputHandler {
 
         boolean isDrawing = mc.player.getMainHandItem().getItem() instanceof IPaintProvider
                 && PaintProviders.getProvider(mc.player.getMainHandItem()) != null
-                && mc.options.keyUse.isDown();
+                && provider.shouldPaint(mc.player);
 
         if (!isDrawing) {
             wasDrawing = false;

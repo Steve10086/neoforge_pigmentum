@@ -22,11 +22,14 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
 
+@OnlyIn(Dist.CLIENT)
 public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntity> {
     private static final float OFFSET = 0.001f;
 
@@ -48,6 +51,8 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
                     return;
                 }
             }
+        }else{
+            return;
         }
 
         Level level = be.getLevel();
@@ -77,13 +82,15 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
             if (isOcclusion) {
                 faceLight = getNeighborLight(level, pos, face.primaryFace());
             }
-            double offset = 0.001;
+            double offset = OFFSET;
             for (var t : tex.resourceLocations()){
                 RenderContext context = new RenderContext(face, t, poseStack, bufferSource,
                         faceLight, packedOverlay, level, pos, isOcclusion, offset);
-                offset += 0.001;
+                offset += OFFSET;
                 CanvasPixelRenderer renderer = CanvasRendererRegistry.resolve(context);
-                renderer.renderFace(context);  // 总是处理，默认实现保证 true
+                if (renderer != null) {
+                    renderer.renderFace(context);
+                }
             }
         }
     }

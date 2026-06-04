@@ -3,6 +3,7 @@ package com.astune.painter.registry;
 import com.astune.painter.block.CanvasBlockItem;
 import com.astune.painter.item.CanvasSheet;
 import com.astune.painter.item.DebugPaintbrush;
+import com.astune.painter.item.EffectCreator;
 import com.astune.painter.item.Paintbrush;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.BlockItem;
@@ -44,6 +45,8 @@ public class ModItems {
     public static final Supplier<Item> CANVAS_SHEET = ITEMS.register("canvas_sheet",
             () -> new CanvasSheet(new Item.Properties().stacksTo(1)));
 
+    public static final Supplier<Item> EFFECT_CREATOR = ITEMS.register("effect_creator",
+            EffectCreator::new);
     public static final DeferredHolder<Item, BlockItem> CANVAS_NO_OCCLUSION_ITEM =
             ITEMS.register("canvas_no_occlusion",
                     () -> new CanvasBlockItem(ModBlocks.CANVAS_NO_OCCLUSION.get(), new Item.Properties()));

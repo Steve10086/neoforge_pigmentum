@@ -44,6 +44,7 @@ public abstract class BlockEntityMixin implements CanvasDataHolder {
     private void onSetRemoved(CallbackInfo ci) {
         BlockEntity self = (BlockEntity) (Object) this;
         if (self.getLevel() != null && self.getLevel().isClientSide) {
+            System.out.println("removed!");
             painter$releaseTextures();
             painter$cachedFaceTextures = null;
             painter$clientTextureId = -1;
@@ -58,12 +59,15 @@ public abstract class BlockEntityMixin implements CanvasDataHolder {
 
     @Override
     public void painter$regenerateTextures(CanvasData data) {
+        BlockEntity self = (BlockEntity) (Object) this;
+        if(self.getLevel() == null || !self.getLevel().isClientSide) return;
+
         if (painter$clientTextureId == -1) {
             painter$clientTextureId = CanvasTextureManager.NEXT_TEXTURE_ID++;
         }
         if (data == null) {
             CanvasTextureManager.releaseTextures(painter$clientTextureId);
-            this.painter$cachedFaceTextures = null;
+            painter$cachedFaceTextures = null;
             return;
         }
 
@@ -84,7 +88,6 @@ public abstract class BlockEntityMixin implements CanvasDataHolder {
             faceIndex++;
         }
         this.painter$cachedFaceTextures = newList.isEmpty() ? null : newList;
-        //System.out.println(newList);
     }
 
     @Override

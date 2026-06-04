@@ -16,7 +16,7 @@ public class DefaultCanvasPixelRenderer implements CanvasPixelRenderer {
     @Override
     public boolean canRender(RenderContext context){
         //System.out.println(context);
-        return !(context.texture == null || !context.texture.getPath().contains("_default_"));
+        return (context.texture != null && context.texture.getPath().contains("_default_"));
     }
 
     @Override

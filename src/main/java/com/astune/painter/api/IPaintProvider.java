@@ -51,4 +51,14 @@ public interface IPaintProvider {
     default BlendFunction getCustomBlendFunction(ItemStack stack) {
         return null;
     }
+
+    /**
+     * 判断当前帧是否应该触发绘制。
+     * Player 的 currentInput 可能不包含 right-click 代理，故提供 context 参数。
+     * 默认实现：检测鼠标右键是否按下（保持现有行为）。
+     */
+    default boolean shouldPaint(Player player) {
+        return player.level().isClientSide
+                && net.minecraft.client.Minecraft.getInstance().options.keyUse.isDown();
+    }
 }
