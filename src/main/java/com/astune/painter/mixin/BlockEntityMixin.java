@@ -44,7 +44,7 @@ public abstract class BlockEntityMixin implements CanvasDataHolder {
     private void onSetRemoved(CallbackInfo ci) {
         BlockEntity self = (BlockEntity) (Object) this;
         if (self.getLevel() != null && self.getLevel().isClientSide) {
-            System.out.println("removed!");
+            //System.out.println("removed!");
             painter$releaseTextures();
             painter$cachedFaceTextures = null;
             painter$clientTextureId = -1;

@@ -118,42 +118,16 @@ public class PaintInputHandler {
                 hitLoc.getBlockPos(), hitLoc.getLocation());
         if (pattern == null || pattern.width() <= 0 || pattern.height() <= 0) return;
 
-        Player player = mc.player;
-
         Direction normal = hitLoc.getDirection();
         BlockPos pos = hitLoc.getBlockPos();
         Vec3 hitPoint = hitLoc.getLocation();
-        double patternW = pattern.width();
-        double patternH = pattern.height();
 
-        // 根据玩家视线动态计算面上的局部坐标轴，使图案始终正对玩家
-        Vec3 lookVec = player.getViewVector(1.0f);
         Vec3 normalVec = Vec3.atLowerCornerOf(normal.getNormal());
 
-        // rightInWorld：在面内且指向屏幕右侧的方向
-        Vec3 rightInWorld = lookVec.cross(normalVec).normalize();
-        // upInWorld：在面内且指向屏幕上方的方向
-        Vec3 upInWorld = normalVec.cross(rightInWorld).normalize();
-
-        // 如果玩家正对法线，cross 结果为零向量，此时使用基于 world up 的回退方案
-        if (rightInWorld.lengthSqr() < 0.001 || upInWorld.lengthSqr() < 0.001) {
-            Vec3 worldUp = new Vec3(0, 1, 0);
-            rightInWorld = worldUp.cross(normalVec).normalize();
-            upInWorld = normalVec.cross(rightInWorld).normalize();
-        }
-
-        // 起始点：从命中点向左下移动半个图案尺寸
-        Vec3 startPos = hitPoint
-                .subtract(rightInWorld.scale((patternW / 2.0)))
-                .subtract(upInWorld.scale((patternH / 2.0)));
-
-        // 左下角世界坐标
-        Vec3 c1 = hitPoint.subtract(rightInWorld.scale(patternW / 2.0))
-                .subtract(upInWorld.scale(patternH / 2.0));
-
-        // 将总长度编码到方向向量中
-        Vec3 rightTotal = rightInWorld.scale(patternW);
-        Vec3 upTotal = upInWorld.scale(patternH);
+        Vec3[] axes = provider.transformPatternAxes(mc.player, hitPoint, normal, pattern.width(), pattern.height());
+        Vec3 c1 = axes[0];
+        Vec3 rightTotal = axes[1];
+        Vec3 upTotal = axes[2];
 
         paintAt(mc, c1, rightTotal, upTotal, pixelStep, pattern.provider(), provider, 2, normalVec);
 
