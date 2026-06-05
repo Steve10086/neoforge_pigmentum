@@ -24,10 +24,14 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 public class EffectCreator extends Item implements IPaintProvider {
+
+    private static Vec3 lastHitLoc = null;
 
     public EffectCreator() {
         super(new Item.Properties());
@@ -42,8 +46,19 @@ public class EffectCreator extends Item implements IPaintProvider {
     }
 
     @Override
-    public boolean shouldPaint(Player player){
-        return player.isShiftKeyDown();
+    public boolean shouldPaint(Player player, BlockHitResult result){
+        if (!(player.level().isClientSide
+                && net.minecraft.client.Minecraft.getInstance().options.keyUse.isDown())) return false;
+        if (lastHitLoc == null) {
+            lastHitLoc = result.getLocation();
+            return true;
+        }
+        if (lastHitLoc.distanceTo(result.getLocation()) > getStep()){
+            lastHitLoc = result.getLocation();
+            return true;
+        }
+
+        return false;
     }
 
     @Nullable

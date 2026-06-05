@@ -54,8 +54,7 @@ public class PaintInputHandler {
         }
 
         boolean isDrawing = mc.player.getMainHandItem().getItem() instanceof IPaintProvider
-                && PaintProviders.getProvider(mc.player.getMainHandItem()) != null
-                && provider.shouldPaint(mc.player);
+                && PaintProviders.getProvider(mc.player.getMainHandItem()) != null;
 
         if (!isDrawing) {
             wasDrawing = false;
@@ -72,6 +71,14 @@ public class PaintInputHandler {
 
         if (mc.hitResult == null || mc.hitResult.getType() != HitResult.Type.BLOCK) return;
         BlockHitResult blockHit = (BlockHitResult) mc.hitResult;
+
+        // 每帧在首次命中前触发 shouldPaint 检查，用于重置状态
+        if (!provider.shouldPaint(mc.player, blockHit)) {
+            wasDrawing = false;
+            lastHitLoc = null;
+            return;
+        }
+
         Vec3 currentHitLoc = blockHit.getLocation();
 
         // 首次绘制
@@ -92,13 +99,15 @@ public class PaintInputHandler {
         Vec3 pos = lastHitLoc;
         for (int i = 0; i <= steps; i++) {
             BlockHitResult midHit = traceHit(mc, pos);
-            if (midHit != null) {
+            if (midHit != null && provider.shouldPaint(mc.player, midHit)) {
                 paintPattern(mc, stack, midHit, provider, pixelStep);
             }
             pos = pos.add(stepVec);
         }
 
-        paintPattern(mc, stack, blockHit, provider, pixelStep);
+        if (provider.shouldPaint(mc.player, blockHit)) {
+            paintPattern(mc, stack, blockHit, provider, pixelStep);
+        }
         lastHitLoc = currentHitLoc;
         wasDrawing = true;
     }

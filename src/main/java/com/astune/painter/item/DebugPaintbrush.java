@@ -20,6 +20,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -58,6 +59,23 @@ public class DebugPaintbrush extends Item implements IPaintProvider {
     @Override
     public Integer getColor(ItemStack stack, Player player, Level level, BlockPos pos, CanvasFace face, int pixelX, int pixelY) {
         return getCurrentColor(stack);
+    }
+    private static Vec3 lastHitLoc = null;
+
+    @Override
+    public boolean shouldPaint(Player player, BlockHitResult result){
+        if (!(player.level().isClientSide
+                && net.minecraft.client.Minecraft.getInstance().options.keyUse.isDown())) return false;
+        if (lastHitLoc == null) {
+            lastHitLoc = result.getLocation();
+            return true;
+        }
+        if (lastHitLoc.distanceTo(result.getLocation()) > getStep()){
+            lastHitLoc = result.getLocation();
+            return true;
+        }
+
+        return false;
     }
 
     @Nullable

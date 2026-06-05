@@ -6,6 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nullable;
@@ -54,11 +55,21 @@ public interface IPaintProvider {
 
     /**
      * 判断当前帧是否应该触发绘制。
-     * Player 的 currentInput 可能不包含 right-click 代理，故提供 context 参数。
      * 默认实现：检测鼠标右键是否按下（保持现有行为）。
+     * 推荐重写 {@link #shouldPaint(Player, BlockHitResult)} 来按命中点过滤。
      */
     default boolean shouldPaint(Player player) {
         return player.level().isClientSide
                 && net.minecraft.client.Minecraft.getInstance().options.keyUse.isDown();
+    }
+
+    /**
+     * 判断当前帧是否应该在指定命中点触发绘制。
+     * 默认实现：忽略命中点，委托给 {@link #shouldPaint(Player)}。
+     *
+     * @param hit 当前准星指向的方块命中结果，可能为 null
+     */
+    default boolean shouldPaint(Player player, @Nullable BlockHitResult hit) {
+        return shouldPaint(player);
     }
 }
