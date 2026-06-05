@@ -49,6 +49,16 @@ public interface IPaintProvider {
 
     @Nullable
     default BlendFunction getCustomBlendFunction(ItemStack stack) { return null; }
+
+    // --- 触发条件 ---
+
+    default boolean shouldPaint(Player player) { /* 默认检测鼠标右键 */ }
+
+    default boolean shouldPaint(Player player, @Nullable BlockHitResult hit) { /* 忽略 hit，委托给单参数版 */ }
+
+    // --- 图案变换 ---
+
+    default Vec3[] transformPatternAxes(Player player, Vec3 hitPoint, Direction face, double w, double h) { ... }
 }
 ```
 
@@ -58,6 +68,57 @@ public interface IPaintProvider {
 - `onPaintTick`: 画笔激活时每渲染帧调用一次。返回 `false` 会跳过当前帧的绘制。
 - `getPaintInterval`: 两次绘制之间的渲染帧间隔。`1` 表示每帧都绘制，`2` 表示隔一帧画一次。
 - `getCustomBlendFunction`: 提供自定义的 `BlendFunction` 以实现高级颜色/效果混合。返回 `null` 则使用基于画笔混合模式的标准混合（见 [混合模式](#混合模式)）。
+
+### 触发条件
+
+```java
+default boolean shouldPaint(Player player);
+default boolean shouldPaint(Player player, @Nullable BlockHitResult hit);
+```
+
+- `shouldPaint(Player)`: 判断当前帧是否应该触发绘制。默认检测鼠标右键是否按下。重写可实现任意触发方式（快捷键、自动绘制等）。
+- `shouldPaint(Player, BlockHitResult)`: 按命中点过滤。每次调用 `paintPattern` 前都会检查，包括 Bresenham 插值的中间采样点。默认忽略 `hit` 委托给单参数版。重写可实现按方块类型、距离、方向等过滤。
+
+使用示例——仅在指向特定方块时绘制：
+```java
+@Override
+public boolean shouldPaint(Player player, @Nullable BlockHitResult hit) {
+    if (hit == null) return false;
+    BlockState state = player.level().getBlockState(hit.getBlockPos());
+    return state.is(Blocks.STONE); // 只在石头上绘制
+}
+```
+
+### 图案变换
+
+```java
+default Vec3[] transformPatternAxes(Player player, Vec3 hitPoint, Direction face, double w, double h);
+```
+
+计算图案在面内的坐标系，返回 `{origin, rightAxis, upAxis}`。其中 `rightAxis` 和 `upAxis` 已缩放至图案的宽高尺寸，`origin` 是图案左下角的世界坐标。
+
+默认实现：根据玩家视线旋转图案朝向（`lookVec × normalVec`），使图案始终正对玩家。重写可实现固定朝向、世界轴对齐、或任意旋转变换。
+
+固定朝向示例：
+```java
+@Override
+public Vec3[] transformPatternAxes(Player player, Vec3 hitPoint, Direction face, double w, double h) {
+    Vec3 normal = Vec3.atLowerCornerOf(face.getNormal());
+    Vec3 worldUp = new Vec3(0, 1, 0);
+    Vec3 right = worldUp.cross(normal).normalize();
+    Vec3 up = normal.cross(right).normalize();
+    // fallback
+    if (right.lengthSqr() < 0.001) {
+        right = new Vec3(1, 0, 0).cross(normal).normalize();
+        up = normal.cross(right).normalize();
+    }
+    return new Vec3[]{
+        hitPoint.subtract(right.scale(w / 2)).subtract(up.scale(h / 2)),
+        right.scale(w),
+        up.scale(h)
+    };
+}
+```
 
 ---
 
