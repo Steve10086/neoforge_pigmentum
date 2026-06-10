@@ -118,6 +118,7 @@ public class BrushConfigScreen extends Screen {
         }
     }
     private void syncBrushToServer() {
+        if(brushStack.isEmpty()) return;
         int slot = minecraft.player.getInventory().selected;
         PacketDistributor.sendToServer(new ItemSyncPacket(slot, brushStack));
     }

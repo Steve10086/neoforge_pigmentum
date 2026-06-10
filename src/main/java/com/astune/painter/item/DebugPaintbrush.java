@@ -299,7 +299,7 @@ public class DebugPaintbrush extends Item implements IPaintProvider {
             if (sPickingColor && !KEY_PICK_COLOR.isDown()){
                 ItemStack brush = mc.player.getMainHandItem();
                 int slot = mc.player.getInventory().selected;
-                if (brush.getItem() instanceof DebugPaintbrush) {
+                if (brush.getItem() instanceof DebugPaintbrush && !brush.isEmpty()){
                     PacketDistributor.sendToServer(new ItemSyncPacket(slot, brush));
                     sPickingColor = false;
                 }

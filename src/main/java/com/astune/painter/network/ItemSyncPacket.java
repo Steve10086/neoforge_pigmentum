@@ -7,6 +7,8 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public record ItemSyncPacket(int slot, ItemStack stack) implements CustomPacketPayload {
@@ -17,8 +19,8 @@ public record ItemSyncPacket(int slot, ItemStack stack) implements CustomPacketP
     public static final StreamCodec<RegistryFriendlyByteBuf, ItemSyncPacket> STREAM_CODEC =
             StreamCodec.composite(
                     ByteBufCodecs.VAR_INT, ItemSyncPacket::slot,
-                    ItemStack.STREAM_CODEC, ItemSyncPacket::stack,
-                    ItemSyncPacket::new
+                    ItemStack.OPTIONAL_STREAM_CODEC, ItemSyncPacket::stack,
+                    (slot, stack) -> new ItemSyncPacket(slot, stack != null ? stack : ItemStack.EMPTY)
             );
 
     @Override
@@ -27,6 +29,9 @@ public record ItemSyncPacket(int slot, ItemStack stack) implements CustomPacketP
     }
 
     public static void handleItemSync(ItemSyncPacket packet, IPayloadContext ctx) {
+        if (!ctx.flow().isServerbound()) {
+            return;
+        }
         ctx.enqueueWork(() -> {
             var player = ctx.player();
 
