@@ -31,7 +31,7 @@ import java.util.Map;
 
 @OnlyIn(Dist.CLIENT)
 public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntity> {
-    private static final float OFFSET = 0.001f;
+    private static float offset() { return com.astune.painter.Config.CANVAS_RENDER_LAYER_OFFSET.get().floatValue(); }
 
     public CanvasBlockEntityRenderer(BlockEntityRendererProvider.Context ctx) {}
 
@@ -82,11 +82,11 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
             if (isOcclusion) {
                 faceLight = getNeighborLight(level, pos, face.primaryFace());
             }
-            double offset = OFFSET;
+            double offset = offset();
             for (var t : tex.resourceLocations()){
                 RenderContext context = new RenderContext(face, t, poseStack, bufferSource,
                         faceLight, packedOverlay, level, pos, isOcclusion, offset);
-                offset += OFFSET;
+                offset += offset();
                 CanvasPixelRenderer renderer = CanvasRendererRegistry.resolve(context);
                 if (renderer != null) {
                     renderer.renderFace(context);
