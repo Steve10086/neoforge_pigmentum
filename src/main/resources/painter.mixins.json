@@ -15,6 +15,7 @@
     "ItemFrameRendererMixin",
     "LevelAccessorMixin",
     "LevelMixin",
+    "LevelRendererMixin",
     "PistonBaseBlockMixin",
     "PistonStructureResolverMixin"
   ],

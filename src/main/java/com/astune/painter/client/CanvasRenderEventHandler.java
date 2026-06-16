@@ -11,20 +11,22 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.AirBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.AddSectionGeometryEvent;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import org.joml.Vector3f;
 
 public class CanvasRenderEventHandler {
 
-    /** BlockPos processed by AddSectionGeometryEvent this frame. Cleared by fallback mixin. */
+    /** BlockPos processed by AddSectionGeometryEvent. Cleared per-section by LevelRendererMixin on setSectionDirty. */
     public static final Set<BlockPos> SEEN_POSITIONS = ConcurrentHashMap.newKeySet();
-    private static final Set<BlockPos> SEEN_POSITIONS_COPY = ConcurrentHashMap.newKeySet();
 
     private static final RenderType[] ALL_LAYERS = {
             RenderType.solid(),
@@ -40,16 +42,19 @@ public class CanvasRenderEventHandler {
         Level level = event.getLevel();
 
         BlockRenderDispatcher dispatcher = mc.getBlockRenderer();
-        //System.out.println("Triggered");
+
 
         event.addRenderer(ctx -> {
             PoseStack poseStack = ctx.getPoseStack();
-
+            Set<BlockPos> temp_position = new HashSet<>();
+            int count = 0;
             for (int x = 0; x < 16; x++)
                 for (int y = 0; y < 16; y++)
                     for (int z = 0; z < 16; z++) {
                         BlockPos pos = origin.offset(x, y, z);
                         BlockState state = level.getBlockState(pos);
+
+                        if (!(state.getBlock() instanceof AirBlock)) count ++;
 
                         if (!(state.getBlock() instanceof CanvasBlock)) continue;
 
@@ -75,22 +80,22 @@ public class CanvasRenderEventHandler {
 
                         BakedModel blockModel = dispatcher.getBlockModel(renderState);
 
-                        if(SEEN_POSITIONS.contains(pos)){
-                            SEEN_POSITIONS.clear();
-                        }
-                        SEEN_POSITIONS.add(pos.immutable());
+                        temp_position.add(pos.immutable());
 
                         for (RenderType rendertype : blockModel.getRenderTypes(renderState, RandomSource.create(), null)){
                             poseStack.pushPose();
                             poseStack.translate(offset.x, offset.y, offset.z);
                             dispatcher.renderBatched(
-                                    renderState, pos, level, poseStack,
+                                    renderState, pos, ctx.getRegion(), poseStack,
                                     ctx.getOrCreateChunkBuffer(rendertype),
                                     true, RandomSource.create()
                             );
                             poseStack.popPose();
                         }
                     }
+            if (origin.getX() < 1000000 || count > 1){
+                SEEN_POSITIONS.addAll(temp_position);
+            }
         });
     }
 }
