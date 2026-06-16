@@ -44,7 +44,7 @@
 | `CanvasBlock` | 代理方块基类，负责形状、光照、破坏、交互等委托 |
 | `CanvasBlockEntity` | 存储 `mimickedState`（被模仿方块）和 `CanvasData`（画布数据） |
 | `CanvasData` / `CanvasFace` / `PixelMatrix` | 画布数据模型，支持 Codec/StreamCodec 序列化 |
-| `CanvasRenderEventHandler` | 在区段几何构建时渲染原方块模型 |
+| `CanvasBlockModel` | 通过 ModelData 将方块模型委托给被模仿的方块 |
 | `CanvasBlockEntityRenderer` | 以动态纹理渲染画布像素面 |
 | `CanvasTextureManager` | 管理动态纹理的生成、缓存与释放 |
 | `PaintInputHandler` | 客户端每渲染帧检测画笔输入，实现流畅绘制 |

@@ -40,6 +40,8 @@ public class PaintInputHandler {
     private static boolean wasDrawing = false;
     private static int paintCounter = 0;
 
+    private static final int max_dist = 10;
+
     @SubscribeEvent
     public static void onRenderFrame(RenderFrameEvent.Pre event) {
         Minecraft mc = Minecraft.getInstance();
@@ -92,17 +94,19 @@ public class PaintInputHandler {
         // Bresenham 3D 插值
         Vec3 dir = currentHitLoc.subtract(lastHitLoc);
         double dist = dir.length();
-        double stepSize = provider.getStep();
-        int steps = (int) (dist / stepSize);
-        Vec3 stepVec = dir.normalize().scale(stepSize);
+        if(dist < max_dist) {
+            double stepSize = provider.getStep();
+            int steps = (int) (dist / stepSize);
+            Vec3 stepVec = dir.normalize().scale(stepSize);
 
-        Vec3 pos = lastHitLoc;
-        for (int i = 0; i <= steps; i++) {
-            BlockHitResult midHit = traceHit(mc, pos);
-            if (midHit != null && provider.shouldPaint(mc.player, midHit)) {
-                paintPattern(mc, stack, midHit, provider, pixelStep);
+            Vec3 pos = lastHitLoc;
+            for (int i = 0; i <= steps; i++) {
+                BlockHitResult midHit = traceHit(mc, pos);
+                if (midHit != null && provider.shouldPaint(mc.player, midHit)) {
+                    paintPattern(mc, stack, midHit, provider, pixelStep);
+                }
+                pos = pos.add(stepVec);
             }
-            pos = pos.add(stepVec);
         }
 
         if (provider.shouldPaint(mc.player, blockHit)) {
