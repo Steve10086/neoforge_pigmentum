@@ -30,8 +30,10 @@ public class PixelMatrix implements IPixelMatrix{
     }
 
     @Override
-    public IPixelMatrix copy() {
-        return null;
+    public PixelMatrix copy() {
+        PixelMatrix m = new PixelMatrix(width, height);
+        System.arraycopy(pixels, 0, m.pixels, 0, pixels.length);
+        return m;
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.astune.painter.api;
 
 import com.astune.painter.block.CanvasBlock;
 import com.astune.painter.block.CanvasBlockEntity;
+import com.astune.painter.event.CanvasBlockReplacedEvent;
 import com.astune.painter.registry.ModBlocks;
 import com.astune.painter.util.CanvasBlacklist;
 import com.mojang.datafixers.util.Pair;
@@ -20,6 +21,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.neoforged.neoforge.common.NeoForge;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -309,6 +311,7 @@ public class CanvasData {
         BlockEntity newBe = level.getBlockEntity(pos);
         if (newBe instanceof CanvasBlockEntity canvasBE) {
             canvasBE.setMimickedState(originalState);
+            NeoForge.EVENT_BUS.post(new CanvasBlockReplacedEvent(pos, originalState, canvasBE));
         }
     }
 

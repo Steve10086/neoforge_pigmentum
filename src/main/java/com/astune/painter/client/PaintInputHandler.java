@@ -4,6 +4,8 @@ package com.astune.painter.client;
 import com.astune.painter.api.*;
 import com.astune.painter.api.blend.BlendContext;
 import com.astune.painter.api.blend.BlendFunction;
+import com.astune.painter.event.ClientCanvasFrameEvent;
+import com.astune.painter.event.ClientCanvasTickEvent;
 import com.astune.painter.network.CanvasAction;
 import com.astune.painter.network.CanvasUploadPacket;
 import com.mojang.datafixers.util.Pair;
@@ -22,14 +24,17 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.*;
 
 import static com.astune.painter.api.CanvasData.getOrCreateCanvasFace;
+import static java.lang.Math.max;
 
 @OnlyIn(Dist.CLIENT)
 @EventBusSubscriber(modid = "painter", value = Dist.CLIENT)
@@ -40,12 +45,19 @@ public class PaintInputHandler {
     private static boolean wasDrawing = false;
     private static int paintCounter = 0;
 
-    private static final int max_dist = 10;
+    // Frame/Tick event collectors
+    private static final Map<BlockPos, List<CanvasFace>> frameAffected = new HashMap<>();
+    private static final Map<BlockPos, List<CanvasFace>> tickAccumulator = new HashMap<>();
+    private static volatile boolean tickDirty = false;
+
+    private static final int max_dist = 1;
 
     @SubscribeEvent
     public static void onRenderFrame(RenderFrameEvent.Pre event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
+
+        frameAffected.clear();
 
         ItemStack stack = mc.player.getMainHandItem();
         IPaintProvider provider = PaintProviders.getProvider(stack);
@@ -94,7 +106,7 @@ public class PaintInputHandler {
         // Bresenham 3D 插值
         Vec3 dir = currentHitLoc.subtract(lastHitLoc);
         double dist = dir.length();
-        if(dist < max_dist) {
+        if(dist < max(max_dist, provider.getStep()) ) {
             double stepSize = provider.getStep();
             int steps = (int) (dist / stepSize);
             Vec3 stepVec = dir.normalize().scale(stepSize);
@@ -114,6 +126,22 @@ public class PaintInputHandler {
         }
         lastHitLoc = currentHitLoc;
         wasDrawing = true;
+
+        // Fire per-frame event and accumulate for tick
+        if (!frameAffected.isEmpty()) {
+            Map<BlockPos, List<CanvasFace>> snapshot = new HashMap<>(frameAffected);
+            NeoForge.EVENT_BUS.post(new ClientCanvasFrameEvent(snapshot));
+            synchronized (tickAccumulator) {
+                for (var entry : frameAffected.entrySet()) {
+                    tickAccumulator.merge(entry.getKey(), entry.getValue(), (old, add) -> {
+                        List<CanvasFace> merged = new ArrayList<>(old);
+                        for (CanvasFace f : add) if (!old.contains(f)) merged.add(f);
+                        return merged;
+                    });
+                }
+            }
+            tickDirty = true;
+        }
     }
 
     private static void paintPattern(Minecraft mc, ItemStack stack,
@@ -302,6 +330,10 @@ public class PaintInputHandler {
                         holder.painter$setCanvasData(canvas);
                         holder.painter$regenerateTextures(canvas);
                         addPendingPixel(pos);
+                        frameAffected.computeIfAbsent(pos, k -> new ArrayList<>());
+                        if (!frameAffected.get(pos).contains(targetFace)) {
+                            frameAffected.get(pos).add(targetFace);
+                        }
                     }
                 }
             }
@@ -358,6 +390,10 @@ public class PaintInputHandler {
                 holder.painter$regenerateTextures(canvas);
 
                 addPendingPixel(pos);
+                frameAffected.computeIfAbsent(pos, k -> new ArrayList<>());
+                if (!frameAffected.get(pos).contains(targetFace)) {
+                    frameAffected.get(pos).add(targetFace);
+                }
             }
 
         }
@@ -493,5 +529,20 @@ public class PaintInputHandler {
             }
             case ERASE -> 0;
         };
+    }
+
+    @SubscribeEvent
+    public static void onClientTick(ClientTickEvent.Post event) {
+        if (tickDirty) {
+            Map<BlockPos, List<CanvasFace>> snapshot;
+            synchronized (tickAccumulator) {
+                snapshot = new HashMap<>(tickAccumulator);
+                tickAccumulator.clear();
+                tickDirty = false;
+            }
+            if (!snapshot.isEmpty()) {
+                NeoForge.EVENT_BUS.post(new ClientCanvasTickEvent(snapshot));
+            }
+        }
     }
 }

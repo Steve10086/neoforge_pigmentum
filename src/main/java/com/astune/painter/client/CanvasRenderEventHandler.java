@@ -21,7 +21,6 @@ import net.neoforged.neoforge.client.event.AddSectionGeometryEvent;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import org.joml.Vector3f;
 
 public class CanvasRenderEventHandler {
 
