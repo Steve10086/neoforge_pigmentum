@@ -1,6 +1,7 @@
 // client/PaintInputHandler.java
 package com.astune.painter.client;
 
+import com.astune.painter.Painter;
 import com.astune.painter.api.*;
 import com.astune.painter.api.blend.BlendContext;
 import com.astune.painter.api.blend.BlendFunction;
@@ -130,6 +131,7 @@ public class PaintInputHandler {
         // Fire per-frame event and accumulate for tick
         if (!frameAffected.isEmpty()) {
             Map<BlockPos, List<CanvasFace>> snapshot = new HashMap<>(frameAffected);
+            Painter.LOGGER.debug("ClientCanvasFrameEvent: blocks={}", snapshot.size());
             NeoForge.EVENT_BUS.post(new ClientCanvasFrameEvent(snapshot));
             synchronized (tickAccumulator) {
                 for (var entry : frameAffected.entrySet()) {
@@ -541,6 +543,7 @@ public class PaintInputHandler {
                 tickDirty = false;
             }
             if (!snapshot.isEmpty()) {
+                Painter.LOGGER.debug("ClientCanvasTickEvent: blocks={}", snapshot.size());
                 NeoForge.EVENT_BUS.post(new ClientCanvasTickEvent(snapshot));
             }
         }

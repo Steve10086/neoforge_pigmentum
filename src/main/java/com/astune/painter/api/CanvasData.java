@@ -1,5 +1,6 @@
 package com.astune.painter.api;
 
+import com.astune.painter.Painter;
 import com.astune.painter.block.CanvasBlock;
 import com.astune.painter.block.CanvasBlockEntity;
 import com.astune.painter.event.CanvasBlockReplacedEvent;
@@ -311,6 +312,7 @@ public class CanvasData {
         BlockEntity newBe = level.getBlockEntity(pos);
         if (newBe instanceof CanvasBlockEntity canvasBE) {
             canvasBE.setMimickedState(originalState);
+            Painter.LOGGER.debug("CanvasBlockReplacedEvent: pos={}, original={}", pos, originalState);
             NeoForge.EVENT_BUS.post(new CanvasBlockReplacedEvent(pos, originalState, canvasBE));
         }
     }

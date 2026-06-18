@@ -24,7 +24,8 @@
 17. [数据组件](#数据组件)
 18. [附件类型](#附件类型)
 19. [其他 API 接口](#其他-api-接口)
-20. [示例](#示例)
+20. [事件系统（二次开发）](#事件系统二次开发)
+21. [示例](#示例)
 
 ---
 
@@ -744,7 +745,107 @@ public class CompositePainting {
 
 ---
 
-## 示例
+## 事件系统（二次开发）
+
+Pigmentum 在 NeoForge 事件总线上发布以下事件，外部模组可通过 `@SubscribeEvent` 订阅。
+
+所有事件均继承 `net.neoforged.bus.api.Event`，`post()` 为**同步阻塞**执行（subscriber 在调用线程上执行完毕后才返回）。
+
+---
+
+### ClientCanvasFrameEvent — 渲染帧绘画事件
+
+每渲染帧结束时触发一次，包含本帧内被修改的所有方块和面。在 **render thread** 上执行，subscriber 应尽量轻量。
+
+```java
+public class ClientCanvasFrameEvent extends Event {
+    /** 不可变映射：本帧被修改的 BlockPos → 对应的 CanvasFace 列表 */
+    public Map<BlockPos, List<CanvasFace>> getAffectedBlocks();
+}
+```
+
+---
+
+### ClientCanvasTickEvent — Tick 累积绘画事件
+
+在 **game thread** 上触发（`ClientTickEvent.Post`），累积自上次 tick 以来所有渲染帧的修改。适合执行较重逻辑（如法阵模式识别），避免阻塞 render thread。
+
+```java
+public class ClientCanvasTickEvent extends Event {
+    /** 不可变映射：自上次 tick 以来所有被修改的 BlockPos → CanvasFace 列表 */
+    public Map<BlockPos, List<CanvasFace>> getAffectedBlocks();
+}
+```
+
+**与 `ClientCanvasFrameEvent` 的关系：**
+```
+Frame 1: paint block A  →  ClientCanvasFrameEvent({A})
+Frame 2: paint block B  →  ClientCanvasFrameEvent({B})
+Tick:                    →  ClientCanvasTickEvent({A, B})
+```
+
+---
+
+### ServerCanvasUpdateEvent — 服务端画布更新事件
+
+客户端上传画布修改后，在 **server thread** 上触发。数据已应用但尚未广播给其他客户端。
+
+```java
+public class ServerCanvasUpdateEvent extends Event {
+    public BlockPos getPos();           // 被修改的方块位置
+    public CanvasData getCanvasData();  // 修改后的完整 CanvasData
+    public CanvasAction getAction();    // ADD_CREATION 或 ADD
+    public Player getPlayer();          // 发起操作的玩家
+}
+```
+
+---
+
+### CanvasBlockReplacedEvent — 画布方块替换事件
+
+当普通方块首次被绘画、自动替换为 `CanvasBlock` 时触发。**客户端和服务端均可触发**。
+
+```java
+public class CanvasBlockReplacedEvent extends Event {
+    public BlockPos getPos();                  // 被替换的方块位置
+    public BlockState getOriginalState();      // 替换前的原始方块状态
+    public CanvasBlockEntity getCanvasBE();    // 新创建的 CanvasBlockEntity（已设置 mimickedState）
+}
+```
+
+---
+
+### 订阅示例
+
+```java
+@EventBusSubscriber(modid = "mymod")
+public class MyFormationDetector {
+
+    @SubscribeEvent
+    public static void onCanvasTick(ClientCanvasTickEvent event) {
+        // 在 game thread 上执行，适合做像素分析
+        for (var entry : event.getAffectedBlocks().entrySet()) {
+            BlockPos pos = entry.getKey();
+            for (CanvasFace face : entry.getValue()) {
+                PixelMatrix pixels = face.pixels();
+                if (matchFormation(pixels)) {
+                    // 法阵识别成功
+                }
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onCanvasReplaced(CanvasBlockReplacedEvent event) {
+        // 跟踪新创建画布方块
+        trackNewCanvas(event.getPos(), event.getOriginalState());
+    }
+}
+```
+
+> **线程注意事项**：`post()` 为同步阻塞。`ClientCanvasFrameEvent` 在 render thread 上执行，避免在其中做耗时操作。需要重计算的逻辑放到 `ClientCanvasTickEvent`（game thread）。
+
+---
 
 ---
 

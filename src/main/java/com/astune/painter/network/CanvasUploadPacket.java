@@ -18,6 +18,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import com.astune.painter.Painter;
 import com.astune.painter.event.ServerCanvasUpdateEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -89,6 +90,7 @@ public record CanvasUploadPacket(BlockPos pos, CanvasData canvasData, CanvasActi
             }
 
             // Fire event before syncing to clients
+            Painter.LOGGER.debug("ServerCanvasUpdateEvent: pos={}, action={}, player={}", pos, packet.action(), player.getName().getString());
             NeoForge.EVENT_BUS.post(new ServerCanvasUpdateEvent(pos, packet.canvasData(), packet.action(), player));
 
             // 同步回所有客户端

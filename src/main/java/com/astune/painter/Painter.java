@@ -34,6 +34,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
+import org.slf4j.event.Level;
 
 import static net.neoforged.fml.loading.FMLEnvironment.dist;
 
@@ -72,6 +73,8 @@ public class Painter {
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+
+        //LogUtils.configureRootLoggingLevel(Level.DEBUG);
     }
 
     private void registerPayloadHandlers(final RegisterPayloadHandlersEvent event) {
