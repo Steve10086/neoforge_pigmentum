@@ -48,7 +48,12 @@ public record SyncCanvasPacket(BlockPos pos, CanvasData canvasData,
     // === 客户端处理器 ===
     public static void handleClient(SyncCanvasPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
-            ClientCanvasCache.putCanvas(packet.pos, packet.canvasData);
+            boolean clearCanvas = packet.canvasData.isEmpty() && packet.mimickedState.isEmpty();
+            if (clearCanvas) {
+                ClientCanvasCache.removeCanvas(packet.pos);
+            } else {
+                ClientCanvasCache.putCanvas(packet.pos, packet.canvasData);
+            }
             packet.mimickedState.ifPresentOrElse(
                     s -> ClientCanvasCache.putMimickedState(packet.pos, s),
                     () -> ClientCanvasCache.removeMimickedState(packet.pos)

@@ -4,6 +4,9 @@ public class DefaultBlendFunctions {
     public static final BlendFunction OVERWRITE = ctx -> {
         boolean result = ctx.face.pixels().setPixel(ctx.px, ctx.py, ctx.newColor);
         if (!result) return false;
+        for (var key : ctx.face.getEffectLayers().keySet()) {
+            ctx.setEffect(key, 0);
+        }
         for (var entry : ctx.effectValues.entrySet()) {
             ctx.setEffect(entry.getKey(), entry.getValue());
         }

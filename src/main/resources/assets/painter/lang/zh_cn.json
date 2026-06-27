@@ -9,6 +9,12 @@
   "painter.configuration.logDirtBlock": "Log Dirt Block",
   "painter.configuration.magicNumberIntroduction": "Magic Number Text",
   "painter.configuration.magicNumber": "Magic Number",
+  "painter.configuration.canvasRenderLayerOffset": "画布渲染层偏移",
+  "painter.configuration.strokeUndoHistoryLimit": "笔画撤销历史上限",
+  "painter.configuration.strokeRedoHistoryLimit": "笔画重做历史上限",
+
+  "key.categories.painter": "Painter",
+  "key.painter.pick_color": "拾取颜色",
 
   "itemGroup.painter": "绘画",
   "block.painter.canvas": "画布方块",

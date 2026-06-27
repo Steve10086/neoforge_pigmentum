@@ -48,9 +48,9 @@ public class ForgeHooksClientMixin {
 
             BakedModel model = blockRenderer.getBlockModel(state1);
 
-            for (RenderType renderType : model.getRenderTypes(state, RandomSource.create(state.getSeed(pos)), ModelData.EMPTY)) {
+            for (RenderType renderType : model.getRenderTypes(state1, RandomSource.create(state1.getSeed(pos)), ModelData.EMPTY)) {
                 VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderTypeHelper.getMovingBlockRenderType(renderType));
-                blockRenderer.getModelRenderer().tesselateBlock(level, model, state, pos, stack, vertexConsumer, checkSides, RandomSource.create(), state.getSeed(pos), packedOverlay, ModelData.EMPTY, renderType);
+                blockRenderer.getModelRenderer().tesselateBlock(level, model, state1, pos, stack, vertexConsumer, checkSides, RandomSource.create(), state.getSeed(pos), packedOverlay, ModelData.EMPTY, renderType);
             }
         }
         List<Pair<CanvasFace, ResourcesBundle>> texture = ClientPistonCache.getCanvasTexture(pos);

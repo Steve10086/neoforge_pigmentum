@@ -25,11 +25,12 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static com.astune.painter.network.CanvasAction.ACTION_CODEC;
 import static com.astune.painter.network.CanvasAction.ADD_CREATION;
 
-public record CanvasUploadPacket(BlockPos pos, CanvasData canvasData, CanvasAction action)
+public record CanvasUploadPacket(BlockPos pos, CanvasData canvasData, CanvasAction action, UUID strokeId)
         implements CustomPacketPayload {
 
     public static final Type<CanvasUploadPacket> TYPE = new Type<>(
@@ -40,8 +41,13 @@ public record CanvasUploadPacket(BlockPos pos, CanvasData canvasData, CanvasActi
                     BlockPos.STREAM_CODEC, CanvasUploadPacket::pos,
                     CanvasData.STREAM_CODEC, CanvasUploadPacket::canvasData,
                     ACTION_CODEC, CanvasUploadPacket::action,
+                    StreamCodec.of((buf, strokeId) -> buf.writeUUID(strokeId), buf -> buf.readUUID()), CanvasUploadPacket::strokeId,
                     CanvasUploadPacket::new
             );
+
+    public CanvasUploadPacket(BlockPos pos, CanvasData canvasData, CanvasAction action) {
+        this(pos, canvasData, action, UUID.randomUUID());
+    }
 
     @Override
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
@@ -53,6 +59,15 @@ public record CanvasUploadPacket(BlockPos pos, CanvasData canvasData, CanvasActi
             Player player = ctx.player();
             Level level = player.level();
             BlockPos pos = packet.pos();
+
+            if (packet.action() != ADD_CREATION && packet.action() != CanvasAction.ADD) {
+                return;
+            }
+
+            CanvasStrokeHistory.BlockSnapshot before = CanvasStrokeHistory.capture(level, pos);
+
+            Painter.LOGGER.debug("ServerCanvasUpdateEvent.Pre: pos={}, action={}, player={}", pos, packet.action(), player.getName().getString());
+            NeoForge.EVENT_BUS.post(new ServerCanvasUpdateEvent.Pre(pos, packet.canvasData(), packet.action(), player));
 
             switch (packet.action){
                 case ADD_CREATION : {
@@ -93,12 +108,17 @@ public record CanvasUploadPacket(BlockPos pos, CanvasData canvasData, CanvasActi
             Painter.LOGGER.debug("ServerCanvasUpdateEvent: pos={}, action={}, player={}", pos, packet.action(), player.getName().getString());
             NeoForge.EVENT_BUS.post(new ServerCanvasUpdateEvent(pos, packet.canvasData(), packet.action(), player));
 
+            CanvasStrokeHistory.BlockSnapshot after = CanvasStrokeHistory.capture(level, pos);
+            if (level instanceof ServerLevel serverLevel) {
+                CanvasStrokeHistory.recordUpload(serverLevel, player.getUUID(), packet.strokeId(), pos, before, after, packet.action());
+            }
+
             // 同步回所有客户端
             syncToClients(level, pos, packet.canvasData(), level.getBlockState(pos));
         });
     }
 
-    private static void syncToClients(Level level, BlockPos pos, CanvasData data, BlockState state) {
+    static void syncToClients(Level level, BlockPos pos, CanvasData data, BlockState state) {
         if (!(level instanceof ServerLevel serverLevel)) return;
         BlockEntity be = level.getBlockEntity(pos);
         BlockState mimicked = be instanceof CanvasBlockEntity canvasBE ? canvasBE.getMimickedState() : null;

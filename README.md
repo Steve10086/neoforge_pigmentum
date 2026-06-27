@@ -13,6 +13,7 @@
 - **不规则方块支持**：楼梯、半砖、栅栏等非完整方块也能精确贴合表面绘制画布，自动适配碰撞箱形状。
 - **动态纹理渲染**：画布像素通过 BER（BlockEntityRenderer）以动态纹理方式渲染，每个面仅 1 个四边形。
 - **画笔配置菜单**：手持画笔右键空气打开 GUI，可调整画笔大小、羽化强度、混合模式、绘画间隔（步长）。
+- **笔画撤销/重做**：服务端按玩家记录最近笔画，可通过命令撤销或重做，首次落笔创建的画布可恢复为原方块。
 
 ### 🎯 画笔系统
 - **吸色功能**：按 `R` 键（可配置）吸取准星指向像素的颜色，自动更新画笔颜色。
@@ -55,7 +56,9 @@
 | `BlendFunction` | 像素混合扩展点 |
 | `SyncCanvasPacket` | 服务端→客户端画布同步包 |
 | `CanvasUploadPacket` | 客户端→服务端画布上传包 |
-| `LevelMixin` | 拦截 `setBlock`，转换画布方块状态更新 |
+| `CanvasStrokeHistory` | 服务端笔画历史、undo/redo 和冲突检测 |
+| `CanvasBlockSetController` | 控制 `setBlock` 代理或真实替换，保护 undo 与活塞行为 |
+| `LevelMixin` | 委托 `CanvasBlockSetController` 代理画布方块状态更新 |
 | `PistonStructureResolverMixin` | 活塞移动时保存画布数据 |
 | `AbstractContainerMenuMixin` | 修复铁砧等菜单的方块验证 |
 | `DoorBlockMixin` | 修复门的双格同步 |
@@ -69,6 +72,11 @@
 2. 按住**右键拖动**在画布上绘制像素。
 3. 按 **`R` 键**吸取准星指向的颜色。
 4. **潜行右键空气**打开画笔配置菜单，调整大小、羽化、混合模式等。
+
+### 笔画历史
+- `//pigmentum undo <player>`：撤销指定玩家上一笔画。
+- `//pigmentum redo <player>`：重做指定玩家上一条撤销记录。
+- 如果其他玩家在之后覆盖了同一方块，撤销会取消以避免覆盖他人笔迹。
 
 ### 提取画布
 1. 合成或获取 `Canvas Sheet` 物品。

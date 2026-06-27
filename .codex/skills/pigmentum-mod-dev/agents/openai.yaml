@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pigmentum Mod Dev"
+  short_description: "Develop against Pigmentum with minimal decompile context."
+  default_prompt: "Use $pigmentum-mod-dev to add or integrate a Pigmentum painting extension in a NeoForge mod."

@@ -788,7 +788,10 @@ Tick:                    →  ClientCanvasTickEvent({A, B})
 
 ### ServerCanvasUpdateEvent — 服务端画布更新事件
 
-客户端上传画布修改后，在 **server thread** 上触发。数据已应用但尚未广播给其他客户端。
+客户端上传画布修改后，在 **server thread** 上触发。默认事件在数据已应用但尚未广播给其他客户端时触发。
+`ServerCanvasUpdateEvent.Pre` 在服务端应用更新前触发，提供相同的字段。监听 `Pre` 时，`ADD_CREATION` 目标位置仍是即将被替换的原方块。
+
+服务端 undo/redo 在回滚或重做普通画布更新时也会按相同顺序触发 `Pre` 和默认事件。若 undo 的目标是“首次落笔创建的画布恢复为原普通方块”，该操作视为方块恢复而非画布更新，不触发 `ServerCanvasUpdateEvent`。
 
 ```java
 public class ServerCanvasUpdateEvent extends Event {
@@ -796,8 +799,23 @@ public class ServerCanvasUpdateEvent extends Event {
     public CanvasData getCanvasData();  // 修改后的完整 CanvasData
     public CanvasAction getAction();    // ADD_CREATION 或 ADD
     public Player getPlayer();          // 发起操作的玩家
+
+    public static class Pre extends ServerCanvasUpdateEvent {}
 }
 ```
+
+---
+
+### 服务端笔画历史命令
+
+Pigmentum 在服务端维护全局笔画历史，默认保留 20 条 undo 记录和 10 条 redo 记录。新笔画上传后会清空 redo 队列。
+
+```
+//pigmentum undo <player>
+//pigmentum redo <player>
+```
+
+undo 会选择指定玩家最近一条笔画记录。执行前会核对方块类型和 `CanvasBlock` 的 `mimickedState`；若其他玩家之后覆盖过相关方块，本次 undo 会取消，避免覆盖他人笔迹。
 
 ---
 

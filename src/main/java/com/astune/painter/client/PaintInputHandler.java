@@ -427,10 +427,11 @@ public class PaintInputHandler {
     public static void onMouseReleased(InputEvent.MouseButton.Pre event) {
         if (!pendingCanvasRequests.isEmpty()) {
             //System.out.println(pendingCanvasRequests.size() + " new updates!");
+            UUID strokeId = UUID.randomUUID();
             for (BlockPos pos : pendingCanvasRequests) {
                 BlockEntity be = Minecraft.getInstance().level.getBlockEntity(pos);
                     if (be instanceof CanvasDataHolder holder) {
-                        CanvasUploadPacket packet = new CanvasUploadPacket(pos, holder.painter$getCanvasData(), CanvasAction.ADD_CREATION);
+                        CanvasUploadPacket packet = new CanvasUploadPacket(pos, holder.painter$getCanvasData(), CanvasAction.ADD_CREATION, strokeId);
                         PacketDistributor.sendToServer(packet);
                     }
                 }
@@ -482,55 +483,6 @@ public class PaintInputHandler {
         // 边界检查
         if (px < 0 || px > pixelW || py < 0 || py > pixelH) return null;
         return new int[]{px, py};
-    }
-
-    private static int applyBlendMode(int existing, int newColor, BlendMode mode) {
-        return switch (mode) {
-            case OVERWRITE -> newColor;
-            case ADD -> {
-                // 颜色不同，进行带 alpha 混合：result = src over dst
-                int eA = (existing >> 24) & 0xFF;
-                int eR = (existing >> 16) & 0xFF;
-                int eG = (existing >> 8) & 0xFF;
-                int eB = existing & 0xFF;
-                int nA = (newColor >> 24) & 0xFF;
-                int nR = (newColor >> 16) & 0xFF;
-                int nG = (newColor >> 8) & 0xFF;
-                int nB = newColor & 0xFF;
-
-                float srcA = nA / 255f;
-                float dstA = eA / 255f;
-                float outA = srcA + dstA * (1 - srcA);
-                if (outA < 0.001f) {
-                    yield 0;
-                }
-                int outR = (int)((nR * srcA + eR * dstA * (1 - srcA)) / outA);
-                int outG = (int)((nG * srcA + eG * dstA * (1 - srcA)) / outA);
-                int outB = (int)((nB * srcA + eB * dstA * (1 - srcA)) / outA);
-                int outAInt = Math.min(255, (int)(outA * 255));
-                yield (outAInt << 24) | (outR << 16) | (outG << 8) | outB;
-            }
-            case MULTIPLY -> {
-                float srcA = ((newColor >> 24) & 0xFF) / 255f;
-                int dstR = (existing >> 16) & 0xFF;
-                int dstG = (existing >> 8) & 0xFF;
-                int dstB = existing & 0xFF;
-                int srcR = (newColor >> 16) & 0xFF;
-                int srcG = (newColor >> 8) & 0xFF;
-                int srcB = newColor & 0xFF;
-                // 正片叠底
-                int mulR = (srcR * dstR) / 255;
-                int mulG = (srcG * dstG) / 255;
-                int mulB = (srcB * dstB) / 255;
-                // 根据源 alpha 混合
-                int outR = (int)(dstR + (mulR - dstR) * srcA);
-                int outG = (int)(dstG + (mulG - dstG) * srcA);
-                int outB = (int)(dstB + (mulB - dstB) * srcA);
-                int outA = (existing >>> 24); // 保持目标 alpha 不变（或可组合）
-                yield (outA << 24) | (outR << 16) | (outG << 8) | outB;
-            }
-            case ERASE -> 0;
-        };
     }
 
     @SubscribeEvent

@@ -9,6 +9,12 @@
   "painter.configuration.logDirtBlock": "Log Dirt Block",
   "painter.configuration.magicNumberIntroduction": "Magic Number Text",
   "painter.configuration.magicNumber": "Magic Number",
+  "painter.configuration.canvasRenderLayerOffset": "Canvas Render Layer Offset",
+  "painter.configuration.strokeUndoHistoryLimit": "Stroke Undo History Limit",
+  "painter.configuration.strokeRedoHistoryLimit": "Stroke Redo History Limit",
+
+  "key.categories.painter": "Painter",
+  "key.painter.pick_color": "Pick Color",
 
   "itemGroup.painter": "Painting",
   "block.painter.canvas": "Canvas Block",

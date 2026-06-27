@@ -11,5 +11,15 @@ public class Config {
                      "Default: 0.001")
             .defineInRange("canvasRenderLayerOffset", 0.001, 0.0, 1.0);
 
+    public static final ModConfigSpec.IntValue STROKE_UNDO_HISTORY_LIMIT = BUILDER
+            .comment("Maximum number of stroke undo records kept globally.",
+                     "Default: 20")
+            .defineInRange("strokeUndoHistoryLimit", 20, 0, 1024);
+
+    public static final ModConfigSpec.IntValue STROKE_REDO_HISTORY_LIMIT = BUILDER
+            .comment("Maximum number of stroke redo records kept globally.",
+                     "Default: 10")
+            .defineInRange("strokeRedoHistoryLimit", 10, 0, 1024);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }

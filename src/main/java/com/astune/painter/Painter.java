@@ -1,6 +1,8 @@
 package com.astune.painter;
 
 import com.astune.painter.client.CanvasRenderEventHandler;
+import com.astune.painter.command.PainterCommands;
+import com.astune.painter.network.CanvasBlockReplacePacket;
 import com.astune.painter.network.CanvasUploadPacket;
 import com.astune.painter.network.ItemSyncPacket;
 import com.astune.painter.network.SyncCanvasPacket;
@@ -26,6 +28,7 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
@@ -80,6 +83,7 @@ public class Painter {
     private void registerPayloadHandlers(final RegisterPayloadHandlersEvent event) {
         final PayloadRegistrar registrar = event.registrar(MODID);
         registrar.playToClient(SyncCanvasPacket.TYPE, SyncCanvasPacket.STREAM_CODEC, SyncCanvasPacket::handleClient);
+        registrar.playToClient(CanvasBlockReplacePacket.TYPE, CanvasBlockReplacePacket.STREAM_CODEC, CanvasBlockReplacePacket::handleClient);
         registrar.playToServer(CanvasUploadPacket.TYPE, CanvasUploadPacket.STREAM_CODEC, CanvasUploadPacket::handleServer);
         registrar.playToServer(ItemSyncPacket.TYPE, ItemSyncPacket.STREAM_CODEC, ItemSyncPacket::handleItemSync);
     }
@@ -102,5 +106,10 @@ public class Painter {
     public void onServerStarting(ServerStartingEvent event) {
         // Do something when the server starts
         //LOGGER.info("HELLO from server starting");
+    }
+
+    @SubscribeEvent
+    public void onRegisterCommands(RegisterCommandsEvent event) {
+        PainterCommands.register(event.getDispatcher());
     }
 }

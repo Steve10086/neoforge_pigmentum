@@ -9,6 +9,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 
 public class CanvasFace {
@@ -134,6 +135,12 @@ public class CanvasFace {
         this.corner2 = corners[2];
         this.corner3 = corners[3];
         this.effectLayers = effectLayers != null ? new HashMap<>(effectLayers) : new HashMap<>();
+    }
+
+    public void removeEffectLayer(Predicate<String> predicate){
+        for (var k : effectLayers.keySet()){
+            if (predicate.test(k))effectLayers.remove(k);
+        }
     }
 
     public byte[] getEffectLayer(String key) {
