@@ -25,6 +25,18 @@ public class CanvasPistonDataCache {
         return DATA.remove(pos);
     }
 
+    /**
+     * Transfers data that has not yet been consumed by a newly loaded Canvas entity.
+     */
+    public static boolean move(BlockPos from, BlockPos to) {
+        CompoundTag data = DATA.remove(from.immutable());
+        if (data == null) {
+            return false;
+        }
+
+        DATA.put(to.immutable(), data);
+        return true;
+    }
 
     public static void clear() { DATA.clear(); }
 

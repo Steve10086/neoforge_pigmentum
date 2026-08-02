@@ -26,9 +26,26 @@ public class ClientPistonCache {
     public static void store(BlockPos oldPos, CompoundTag data) {
         //System.out.println("[CanvasPistonDataCache] Saving data to " + oldPos);
 
-        DATA_COPY.remove(oldPos.immutable());
-        DATA_COPY.put(oldPos.immutable(), data);
+        BlockPos key = oldPos.immutable();
+        CompoundTag previous = DATA_COPY.get(key);
+        if (previous != null && previous.contains("mimicked_state") && !data.contains("mimicked_state")) {
+            return;
+        }
+
+        DATA_COPY.put(key, data.copy());
         TextureCleaner.addDelayedTask(20, () -> remove(oldPos));
+    }
+
+    public static void copy(BlockPos from, BlockPos to) {
+        CompoundTag data = DATA_COPY.get(from);
+        if (data != null) {
+            store(to, data);
+        }
+
+        List<Pair<CanvasFace, ResourcesBundle>> textures = getCanvasTexture(from);
+        if (textures != null) {
+            storeCanvasTexture(to, textures);
+        }
     }
 
     public static void storeCanvasTexture(BlockPos oldPos, List<Pair<CanvasFace, ResourcesBundle>> textures){

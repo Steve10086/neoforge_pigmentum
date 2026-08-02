@@ -44,11 +44,17 @@ public abstract class PistonStructureResolverMixin {
         for (BlockPos pos : toPush) {
             BlockState state = level.getBlockState(pos);
             if (state.getBlock() instanceof CanvasBlock) {
-                CanvasBlockEntity be = (CanvasBlockEntity) level.getBlockEntity(pos);
-                if (be != null) {
+                BlockPos newPos = pos.relative(direction);
+                if (level.getBlockEntity(pos) instanceof CanvasBlockEntity be
+                        && be.getMimickedState() != null) {
                     CompoundTag data = be.saveWithoutMetadata(level.registryAccess());
-                    BlockPos newPos = pos.relative(direction);
                     CanvasPistonDataCache.store(newPos, data);
+                } else {
+                    // The Canvas state can become visible one tick before its block
+                    // entity has consumed the data stored at this position. If the
+                    // piston reverses in that window, hand the pending data directly
+                    // to the actual movement destination.
+                    CanvasPistonDataCache.move(pos, newPos);
                 }
             }
         }

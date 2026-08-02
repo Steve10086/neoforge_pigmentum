@@ -4,6 +4,7 @@ import com.astune.painter.api.CanvasData;
 import com.astune.painter.api.CanvasDataHolder;
 import com.astune.painter.api.CanvasFace;
 import com.astune.painter.api.PixelMatrix;
+import com.astune.painter.client.ClientPistonCache;
 import com.astune.painter.network.CanvasPistonDataCache;
 import com.astune.painter.network.ClientCanvasCache;
 import com.astune.painter.registry.ModBlockEntities;
@@ -94,7 +95,11 @@ public class CanvasBlockEntity extends BlockEntity {
     @Override
     public void onLoad() {
         super.onLoad();
-        if (level != null && !level.isClientSide) {
+        if (level == null) {
+            return;
+        }
+
+        if (!level.isClientSide) {
             CompoundTag movingData = CanvasPistonDataCache.consume(this.worldPosition);
             if (movingData != null) {
                 // 恢复所有数据（包括 mimickedState、canvasData）
@@ -102,6 +107,21 @@ public class CanvasBlockEntity extends BlockEntity {
                 // 注意：上面用的是 loadWithComponents，不是 load()
                 setChanged();
                 level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            }
+        } else {
+            CompoundTag movingData = ClientPistonCache.get(this.worldPosition);
+            if (movingData != null && movingData.contains("mimicked_state")) {
+                this.loadWithComponents(movingData, level.registryAccess());
+                if (this instanceof CanvasDataHolder holder) {
+                    CanvasData canvasData = holder.painter$getCanvasData();
+                    if (canvasData != null) {
+                        holder.painter$regenerateTextures(canvasData);
+                        ClientCanvasCache.putCanvas(this.worldPosition, canvasData);
+                    }
+                }
+                if (mimickedState != null) {
+                    ClientCanvasCache.putMimickedState(this.worldPosition, mimickedState);
+                }
             }
         }
     }
