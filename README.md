@@ -33,7 +33,7 @@
 ### 🧩 扩展 API
 - **可替换纹理生成**：通过 `CanvasImageProvider` 接口自定义从 `CanvasFace` 到 `NativeImage` 的生成逻辑。
 - **可替换渲染器**：通过 `CanvasPixelRenderer` 接口和 `CanvasRendererRegistry` 注册自定义画布面渲染行为。
-- **像素级效果系统**：`CanvasFace` 支持每像素附加任意字节数据（效果层），如夜光强度、金属度等，画笔可通过 `PixelProvider` 和 `BlendFunction` 操作效果层。
+- **像素级效果系统**：`CanvasFace` 支持每像素附加任意 `int` 数据（效果层），如夜光强度、金属度等，画笔可通过 `PixelProvider` 和 `BlendFunction` 操作效果层。
 - **混合函数注册**：`BlendFunction` 接口允许完全自定义像素颜色与效果值的混合逻辑。
 
 ---

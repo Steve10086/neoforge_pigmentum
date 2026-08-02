@@ -22,17 +22,17 @@ public class CanvasFace {
     private final Vec3 corner3; // 左上
     // 像素数据
     private final PixelMatrix pixels;
-    private Map<String, byte[]> effectLayers;
+    private Map<String, int[]> effectLayers;
 
-    private static final Codec<byte[]> BYTE_ARRAY_CODEC = Codec.BYTE.listOf().xmap(
+    private static final Codec<int[]> INT_ARRAY_CODEC = Codec.INT.listOf().xmap(
             list -> {
-                byte[] arr = new byte[list.size()];
+                int[] arr = new int[list.size()];
                 for (int i = 0; i < list.size(); i++) arr[i] = list.get(i);
                 return arr;
             },
             arr -> {
-                List<Byte> list = new ArrayList<>(arr.length);
-                for (byte b : arr) list.add(b);
+                List<Integer> list = new ArrayList<>(arr.length);
+                for (int value : arr) list.add(value);
                 return list;
             }
     );
@@ -56,7 +56,7 @@ public class CanvasFace {
                     Vec3.CODEC.fieldOf("c2").forGetter(f -> f.corner2),
                     Vec3.CODEC.fieldOf("c3").forGetter(f -> f.corner3),
                     PixelMatrix.CODEC.fieldOf("pixels").forGetter(CanvasFace::pixels),
-                    Codec.unboundedMap(Codec.STRING, BYTE_ARRAY_CODEC).optionalFieldOf("effects", Map.of()).forGetter(f -> f.effectLayers == null ? Map.of() : f.effectLayers)
+                    Codec.unboundedMap(Codec.STRING, INT_ARRAY_CODEC).optionalFieldOf("effects", Map.of()).forGetter(f -> f.effectLayers == null ? Map.of() : f.effectLayers)
             ).apply(instance, CanvasFace::new)
     );
 
@@ -70,13 +70,15 @@ public class CanvasFace {
                 VEC3_STREAM_CODEC.encode(buf, face.corner3);
                 PixelMatrix.STREAM_CODEC.encode(buf, face.pixels);
                 // 编码效果层
-                Map<String, byte[]> layers = face.getEffectLayers();
+                Map<String, int[]> layers = face.getEffectLayers();
                 buf.writeVarInt(layers.size());
                 for (var entry : layers.entrySet()) {
                     buf.writeUtf(entry.getKey());
-                    byte[] data = entry.getValue();
+                    int[] data = entry.getValue();
                     buf.writeVarInt(data.length);
-                    buf.writeBytes(data);
+                    for (int value : data) {
+                        buf.writeInt(value);
+                    }
                 }
             },
             (RegistryFriendlyByteBuf buf) -> {
@@ -87,12 +89,14 @@ public class CanvasFace {
                 Vec3 c3 = VEC3_STREAM_CODEC.decode(buf);
                 PixelMatrix pixels = PixelMatrix.STREAM_CODEC.decode(buf);
                 int size = buf.readVarInt();
-                Map<String, byte[]> layers = new HashMap<>();
+                Map<String, int[]> layers = new HashMap<>();
                 for (int i = 0; i < size; i++) {
                     String key = buf.readUtf();
                     int len = buf.readVarInt();
-                    byte[] data = new byte[len];
-                    buf.readBytes(data);
+                    int[] data = new int[len];
+                    for (int j = 0; j < len; j++) {
+                        data[j] = buf.readInt();
+                    }
                     layers.put(key, data);
                 }
                 return new CanvasFace(dir, c0, c1, c2, c3, pixels, layers);
@@ -106,7 +110,7 @@ public class CanvasFace {
         this(primaryFace, c0, c1, c2, c3, pixels, new HashMap<>());
     }
 
-    public CanvasFace(Direction primaryFace, Vec3 c0, Vec3 c1, Vec3 c2, Vec3 c3, PixelMatrix pixels, Map<String, byte[]> effectLayers) {
+    public CanvasFace(Direction primaryFace, Vec3 c0, Vec3 c1, Vec3 c2, Vec3 c3, PixelMatrix pixels, Map<String, int[]> effectLayers) {
         this.primaryFace = primaryFace;
         this.corner0 = c0;
         this.corner1 = c1;
@@ -123,7 +127,7 @@ public class CanvasFace {
 
 
     // 兼容旧构造器：从中心偏移 + 尺寸生成四个角点
-    public CanvasFace(Direction primaryFace, Vec3 centerOffset, PixelMatrix pixels, Map<String, byte[]> effectLayers) {
+    public CanvasFace(Direction primaryFace, Vec3 centerOffset, PixelMatrix pixels, Map<String, int[]> effectLayers) {
         this.primaryFace = primaryFace;
         this.pixels = pixels;
         float w = pixels.getWidth() / 16f;
@@ -143,42 +147,42 @@ public class CanvasFace {
         }
     }
 
-    public byte[] getEffectLayer(String key) {
+    public int[] getEffectLayer(String key) {
         if (effectLayers == null) return null;
         return effectLayers.get(key);
     }
 
-    public void setEffectLayer(String key, byte[] data) {
+    public void setEffectLayer(String key, int[] data) {
         if (effectLayers == null) effectLayers = new HashMap<>();
         effectLayers.put(key, data);
     }
 
-    public Map<String, byte[]> getEffectLayers() {
+    public Map<String, int[]> getEffectLayers() {
         if (effectLayers == null) return Collections.emptyMap();
         return Collections.unmodifiableMap(effectLayers);
     }
 
     // 获取某个像素的所有效果值（用于混合）
     public int getEffectValue(String key, int x, int y) {
-        byte[] layer = getEffectLayer(key);
+        int[] layer = getEffectLayer(key);
         if (layer == null) return 0;
         int index = y * pixels.getWidth() + x;
         if (index < 0 || index >= layer.length) return 0;
-        return layer[index] & 0xFF;
+        return layer[index];
     }
 
     // 设置某个像素的效果值
     public void setEffectValue(String key, int x, int y, int value) {
         int w = pixels.getWidth();
         int h = pixels.getHeight();
-        byte[] layer = getEffectLayer(key);
+        int[] layer = getEffectLayer(key);
         if (layer == null) {
-            layer = new byte[w * h];
+            layer = new int[w * h];
             setEffectLayer(key, layer);
         }
         int index = y * w + x;
         if (index >= 0 && index < layer.length) {
-            layer[index] = (byte) Math.clamp(value, 0, 255);
+            layer[index] = value;
         }
     }
 

@@ -501,11 +501,11 @@ public class PixelMatrix implements IPixelMatrix {
 ```java
 // 基础构造：指定主面和四个相对于方块中心的角点
 public CanvasFace(Direction primaryFace, Vec3 c0, Vec3 c1, Vec3 c2, Vec3 c3, PixelMatrix pixels);
-public CanvasFace(Direction primaryFace, Vec3 c0, Vec3 c1, Vec3 c2, Vec3 c3, PixelMatrix pixels, Map<String, byte[]> effectLayers);
+public CanvasFace(Direction primaryFace, Vec3 c0, Vec3 c1, Vec3 c2, Vec3 c3, PixelMatrix pixels, Map<String, int[]> effectLayers);
 
 // 便捷构造：由中心偏移和像素矩阵尺寸自动计算四个角点
 public CanvasFace(Direction primaryFace, Vec3 centerOffset, PixelMatrix pixels);
-public CanvasFace(Direction primaryFace, Vec3 centerOffset, PixelMatrix pixels, Map<String, byte[]> effectLayers);
+public CanvasFace(Direction primaryFace, Vec3 centerOffset, PixelMatrix pixels, Map<String, int[]> effectLayers);
 ```
 
 **字段访问**:
@@ -532,12 +532,12 @@ public boolean isSameSurface(CanvasFace other);
 
 **效果层**:
 
-效果层以字节数组形式存储每像素值（每个像素一个字节，范围 0-255）。典型用途包括发光强度、粗糙度、金属度等。
+效果层以整数数组形式存储每像素值（每个像素一个 Java `int`，不再限制为 0-255）。典型用途包括发光强度、粗糙度、金属度等。
 
 ```java
-public byte[] getEffectLayer(String key);
-public void setEffectLayer(String key, byte[] data);
-public Map<String, byte[]> getEffectLayers();  // 不可变视图
+public int[] getEffectLayer(String key);
+public void setEffectLayer(String key, int[] data);
+public Map<String, int[]> getEffectLayers();  // 不可变视图
 
 // 获取/设置单个像素的效果值
 public int getEffectValue(String key, int x, int y);
@@ -919,7 +919,7 @@ public class GlowImageProvider implements CanvasImageProvider {
 
     @Override
     public NativeImage createImage(CanvasFace face) {
-        byte[] glowLayer = face.getEffectLayer("glow");
+        int[] glowLayer = face.getEffectLayer("glow");
         if (glowLayer == null) {
             return null;  // 没有发光数据，不生成纹理
         }
@@ -928,7 +928,7 @@ public class GlowImageProvider implements CanvasImageProvider {
         NativeImage img = new NativeImage(w, h, false);
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
-                int glow = glowLayer[y * w + x] & 0xFF;
+                int glow = glowLayer[y * w + x];
                 // 发光强度作为 alpha 通道，颜色使用白色 (ABGR 格式)
                 int abgr = (glow << 24) | 0xFFFFFF;
                 img.setPixelRGBA(x, y, abgr);

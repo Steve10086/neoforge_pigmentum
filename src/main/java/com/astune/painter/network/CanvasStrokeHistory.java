@@ -313,9 +313,9 @@ public final class CanvasStrokeHistory {
         );
     }
 
-    private static Map<String, byte[]> copyEffectLayers(Map<String, byte[]> effectLayers) {
-        java.util.HashMap<String, byte[]> copy = new java.util.HashMap<>();
-        for (Map.Entry<String, byte[]> entry : effectLayers.entrySet()) {
+    private static Map<String, int[]> copyEffectLayers(Map<String, int[]> effectLayers) {
+        java.util.HashMap<String, int[]> copy = new java.util.HashMap<>();
+        for (Map.Entry<String, int[]> entry : effectLayers.entrySet()) {
             copy.put(entry.getKey(), entry.getValue().clone());
         }
         return copy;
