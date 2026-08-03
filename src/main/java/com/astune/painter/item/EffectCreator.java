@@ -15,7 +15,6 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
@@ -163,7 +162,7 @@ public class EffectCreator extends Item implements IPaintProvider {
             //System.out.println("render glow " + context.texture.getPath());
 
             Vec3[] corners = face.cornerWithOffset(context.offset);
-            VertexConsumer vc = context.bufferSource.getBuffer(RenderType.entityTranslucent(texture));
+            VertexConsumer vc = context.bufferSource.getBuffer(context.renderType(texture));
             var last = context.poseStack.last();
             Direction dir = face.primaryFace();
             Vec3 normal = Vec3.atLowerCornerOf(dir.getNormal());

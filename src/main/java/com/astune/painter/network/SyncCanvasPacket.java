@@ -22,6 +22,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.Optional;
+import java.util.Objects;
 
 import static com.astune.painter.Painter.MODID;
 
@@ -48,6 +49,9 @@ public record SyncCanvasPacket(BlockPos pos, CanvasData canvasData,
     // === 客户端处理器 ===
     public static void handleClient(SyncCanvasPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
+            BlockState previousCachedState = ClientCanvasCache.getMimickedState(packet.pos);
+            boolean mimickedStateChanged = !Objects.equals(previousCachedState, packet.mimickedState.orElse(null));
+
             boolean clearCanvas = packet.canvasData.isEmpty() && packet.mimickedState.isEmpty();
             if (clearCanvas) {
                 ClientCanvasCache.removeCanvas(packet.pos);
@@ -62,14 +66,21 @@ public record SyncCanvasPacket(BlockPos pos, CanvasData canvasData,
             if (Minecraft.getInstance().level != null) {
                 BlockEntity be = Minecraft.getInstance().level.getBlockEntity(packet.pos);
                 if (be instanceof CanvasBlockEntity canvasBE) {
-                    packet.mimickedState.ifPresent(canvasBE::setMimickedState);
+                    if (packet.mimickedState.isPresent()
+                            && !Objects.equals(canvasBE.getMimickedState(), packet.mimickedState.get())) {
+                        mimickedStateChanged = true;
+                        canvasBE.setMimickedState(packet.mimickedState.get());
+                    }
                     if (be instanceof CanvasDataHolder holder) holder.painter$regenerateTextures(packet.canvasData);
                 }
             }
 
-            var level = Minecraft.getInstance().level;
-            if (level != null) {
-                level.setBlocksDirty(packet.pos, level.getBlockState(packet.pos), level.getBlockState(packet.pos));
+            if (mimickedStateChanged && Minecraft.getInstance().levelRenderer != null) {
+                Minecraft.getInstance().levelRenderer.setSectionDirty(
+                        packet.pos.getX() >> 4,
+                        packet.pos.getY() >> 4,
+                        packet.pos.getZ() >> 4
+                );
             }
         });
     }

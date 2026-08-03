@@ -1,6 +1,7 @@
 package com.astune.painter;
 
 import com.astune.painter.client.CanvasRenderEventHandler;
+import com.astune.painter.client.CanvasWorldRenderQueue;
 import com.astune.painter.command.PainterCommands;
 import com.astune.painter.network.CanvasBlockReplacePacket;
 import com.astune.painter.network.CanvasUploadPacket;
@@ -71,6 +72,7 @@ public class Painter {
         if (dist.isClient()) {
             // 注册到 NeoForge 事件总线（Forge 总线）
             NeoForge.EVENT_BUS.addListener(CanvasRenderEventHandler::onAddGeometry);
+            NeoForge.EVENT_BUS.addListener(CanvasWorldRenderQueue::onRenderLevelStage);
         }
         modEventBus.addListener(this::registerPayloadHandlers);
 

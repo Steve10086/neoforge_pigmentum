@@ -25,6 +25,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -36,6 +37,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 @OnlyIn(Dist.CLIENT)
 public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntity> {
@@ -69,12 +71,7 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
         BlockPos pos = be.getBlockPos();
         boolean occlusion = (be.getBlockState().getBlock() instanceof OcclusionCanvasBlock || be.getBlockState().isSolidRender(level, pos));
 
-        poseStack.pushPose();
-        poseStack.translate(0.5, 0.5, 0.5);
-
-        renderCanvasTexture(level, pos, poseStack, bufferSource, textures, packedLight, packedOverlay, occlusion);
-
-        poseStack.popPose();
+        CanvasWorldRenderQueue.enqueue(be, packedLight, packedOverlay, occlusion);
     }
 
     private void renderState(BlockEntity be, PoseStack poseStack){
@@ -99,11 +96,12 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
         ModelData mData;
         Level level = Minecraft.getInstance().level;
         if (level != null) {
-            mData = model.getModelData(level, pos, mimicked, ModelData.EMPTY);
+            BlockAndTintGetter renderLevel = new CanvasMimicRenderView(level);
+            mData = model.getModelData(renderLevel, pos, mimicked, ModelData.EMPTY);
             for (RenderType rt : model.getRenderTypes(mimicked, random, mData)) {
                 poseStack.pushPose();
                 VertexConsumer vc = bufferSource.getBuffer(rt);
-                dispatcher.renderBatched(mimicked, pos, level, poseStack, vc, true, random);
+                dispatcher.renderBatched(mimicked, pos, renderLevel, poseStack, vc, true, random);
                 poseStack.popPose();
             }
         }
@@ -114,6 +112,15 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
                                            MultiBufferSource bufferSource,
                                            List<Pair<CanvasFace, ResourcesBundle>> textures,
                                            int packedLight, int packedOverlay, boolean isOcclusion) {
+        renderCanvasTexture(level, pos, poseStack, bufferSource, textures,
+                packedLight, packedOverlay, isOcclusion, RenderType::entityTranslucent);
+    }
+
+    public static void renderCanvasTexture(Level level, BlockPos pos, PoseStack poseStack,
+                                           MultiBufferSource bufferSource,
+                                           List<Pair<CanvasFace, ResourcesBundle>> textures,
+                                           int packedLight, int packedOverlay, boolean isOcclusion,
+                                           Function<ResourceLocation, RenderType> renderTypeFactory) {
         for (var pair : textures) {
             CanvasFace face = pair.getFirst();
             ResourcesBundle tex = pair.getSecond();
@@ -127,7 +134,7 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
             double offset = offset();
             for (var t : tex.resourceLocations()){
                 RenderContext context = new RenderContext(face, t, poseStack, bufferSource,
-                        faceLight, packedOverlay, level, pos, isOcclusion, offset);
+                        faceLight, packedOverlay, level, pos, isOcclusion, offset, renderTypeFactory);
                 offset += offset();
                 CanvasPixelRenderer renderer = CanvasRendererRegistry.resolve(context);
                 if (renderer != null) {

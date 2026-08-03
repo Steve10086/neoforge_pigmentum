@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.AirBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -45,6 +46,7 @@ public class CanvasRenderEventHandler {
 
         event.addRenderer(ctx -> {
             PoseStack poseStack = ctx.getPoseStack();
+            BlockAndTintGetter renderLevel = new CanvasMimicRenderView(ctx.getRegion());
             Set<BlockPos> temp_position = new HashSet<>();
             int count = 0;
             for (int x = 0; x < 16; x++)
@@ -85,7 +87,7 @@ public class CanvasRenderEventHandler {
                             poseStack.pushPose();
                             poseStack.translate(offset.x, offset.y, offset.z);
                             dispatcher.renderBatched(
-                                    renderState, pos, ctx.getRegion(), poseStack,
+                                    renderState, pos, renderLevel, poseStack,
                                     ctx.getOrCreateChunkBuffer(rendertype),
                                     true, RandomSource.create()
                             );

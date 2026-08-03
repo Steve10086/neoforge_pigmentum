@@ -5,7 +5,6 @@ import com.astune.painter.api.render.RenderContext;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
@@ -26,7 +25,7 @@ public class DefaultCanvasPixelRenderer implements CanvasPixelRenderer {
         if (texture == null) return false;
 
         Vec3[] corners = face.cornerWithOffset(context.offset);
-        VertexConsumer vc = context.bufferSource.getBuffer(RenderType.entityTranslucent(texture));
+        VertexConsumer vc = context.bufferSource.getBuffer(context.renderType(texture));
         var last = context.poseStack.last();
         Direction dir = face.primaryFace();
         Vec3 normal = Vec3.atLowerCornerOf(dir.getNormal());

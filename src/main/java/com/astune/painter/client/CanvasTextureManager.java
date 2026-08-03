@@ -14,91 +14,146 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 @OnlyIn(Dist.CLIENT)
-public class CanvasTextureManager {
-    // 键: "entityId_faceIndex_providerName", 值: 当前有效的 ResourceLocation
-    private static final Map<String, ResourceLocation> ACTIVE = new ConcurrentHashMap<>();
-    private static long COUNTER = 0;
+public final class CanvasTextureManager {
+    private static final Map<TextureKey, TextureEntry> ACTIVE = new ConcurrentHashMap<>();
     public static int NEXT_TEXTURE_ID = 0;
+
+    private CanvasTextureManager() {}
 
     public static NativeImage createImage(CanvasFace face, CanvasImageProvider provider) {
         return provider.createImage(face);
     }
 
-    /**
-     * 生成或更新指定实体某个方向的画布纹理。
-     * 通过 {@link CanvasImageProviderRegistry} 获取所有匹配的图像提供者，
-     * 每个提供者生成一张纹理，最终打包为 {@link ResourcesBundle}。
-     *
-     * @param entityId 客户端侧 CanvasBlockEntity 的唯一 ID
-     * @return 包含所有提供者纹理的 ResourcesBundle，若无提供者生成成功则 bundle 为空
-     */
-
     public static ResourcesBundle createOrUpdateTexture(CanvasFace face, int entityId, int faceIndex) {
-        String key = key(entityId, faceIndex);
-
         List<ResourceLocation> resources = new ArrayList<>();
+        Set<TextureKey> retained = new HashSet<>();
+        ImageProviderContext context = new ImageProviderContext(face, null, null);
 
-        ImageProviderContext ctx = new ImageProviderContext(face, null, null);
-
-        releaseTexture(entityId, faceIndex);
-
-        for (CanvasImageProvider provider : CanvasImageProviderRegistry.resolveAll(ctx)) {
+        for (CanvasImageProvider provider : CanvasImageProviderRegistry.resolveAll(context)) {
             NativeImage image = provider.createImage(face);
-            if (image == null) continue; // 单个提供者失败跳过，不影响其他
+            if (image == null) continue;
 
-            long id = COUNTER++;
+            TextureKey key = new TextureKey(entityId, faceIndex, provider.name());
+            retained.add(key);
 
-            ResourceLocation newLoc = ResourceLocation.fromNamespaceAndPath("painter",
-                    "canvas/" + key + "_" + provider.name() + "_" + id);
-
-            DynamicTexture dynTex = new DynamicTexture(image);
-            Minecraft.getInstance().getTextureManager().register(newLoc, dynTex);
-            resources.add(newLoc);
-
-            // 按提供者名称区分 ACTIVE 键，确保每个提供者的纹理可独立追踪释放
-            String activeKey = key + "_" + provider.name();
-            ACTIVE.put(activeKey, newLoc);
-            //System.out.println(newLoc.getPath());
-            //System.out.println(activeKey);
+            TextureEntry entry = ACTIVE.get(key);
+            if (entry == null) {
+                ResourceLocation location = stableLocation(key);
+                DynamicTexture texture = new DynamicTexture(image);
+                entry = new TextureEntry(location, texture);
+                ACTIVE.put(key, entry);
+                Minecraft.getInstance().getTextureManager().register(location, texture);
+            } else {
+                updateTexture(key, entry, image);
+            }
+            resources.add(entry.location);
         }
+
+        releaseMatching(key -> key.entityId == entityId
+                && key.faceIndex == faceIndex
+                && !retained.contains(key));
 
         return new ResourcesBundle(resources.toArray(new ResourceLocation[0]));
     }
 
-    /** 释放指定实体的某个面（所有提供者的纹理） */
     public static void releaseTexture(int entityId, int faceIndex) {
-        String key = key(entityId, faceIndex);
-        ACTIVE.entrySet().removeIf(entry -> {
-            if (entry.getKey().startsWith(key + "_")) {
-                RenderSystem.recordRenderCall(() -> {
-                    Minecraft.getInstance().getTextureManager().release(entry.getValue());
-                });
-                return true;
-            }
-            return false;
-        });
+        releaseMatching(key -> key.entityId == entityId && key.faceIndex == faceIndex);
     }
 
-    /** 释放指定实体所有面 */
+    public static void releaseUnusedFaces(int entityId, Set<Integer> retainedFaces) {
+        releaseMatching(key -> key.entityId == entityId && !retainedFaces.contains(key.faceIndex));
+    }
+
     public static void releaseTextures(int entityId) {
-        ACTIVE.entrySet().removeIf(entry -> {
-            if (entry.getKey().startsWith(entityId + "_")) {
-                RenderSystem.recordRenderCall(() -> {
-                    Minecraft.getInstance().getTextureManager().release(entry.getValue());
-                });
-                return true;
+        if (entityId < 0) return;
+        releaseMatching(key -> key.entityId == entityId);
+    }
+
+    private static void updateTexture(TextureKey key, TextureEntry entry, NativeImage image) {
+        Runnable update = () -> {
+            if (ACTIVE.get(key) != entry) {
+                image.close();
+                return;
             }
-            return false;
+
+            NativeImage current = entry.texture.getPixels();
+            if (current != null
+                    && current.getWidth() == image.getWidth()
+                    && current.getHeight() == image.getHeight()) {
+                entry.texture.setPixels(image);
+                entry.texture.upload();
+                return;
+            }
+
+            DynamicTexture replacement = new DynamicTexture(image);
+            Minecraft.getInstance().getTextureManager().register(entry.location, replacement);
+            entry.texture = replacement;
+        };
+
+        if (RenderSystem.isOnRenderThread()) {
+            update.run();
+        } else {
+            RenderSystem.recordRenderCall(update::run);
+        }
+    }
+
+    private static void releaseMatching(Predicate<TextureKey> predicate) {
+        List<ResourceLocation> releasedLocations = new ArrayList<>();
+        ACTIVE.entrySet().removeIf(mapEntry -> {
+            if (!predicate.test(mapEntry.getKey())) return false;
+            releasedLocations.add(mapEntry.getValue().location);
+            return true;
         });
+        for (ResourceLocation location : releasedLocations) {
+            CanvasRenderTypes.release(location);
+            releaseLocationWhenUnused(location);
+        }
     }
 
-    private static String key(int entityId, int faceIndex) {
-        return entityId + "_" + faceIndex;
+    private static void releaseLocationWhenUnused(ResourceLocation location) {
+        Runnable release = () -> {
+            boolean reused = ACTIVE.values().stream().anyMatch(entry -> entry.location.equals(location));
+            if (!reused) {
+                Minecraft.getInstance().getTextureManager().release(location);
+            }
+        };
+
+        if (RenderSystem.isOnRenderThread()) {
+            release.run();
+        } else {
+            RenderSystem.recordRenderCall(release::run);
+        }
     }
 
+    private static ResourceLocation stableLocation(TextureKey key) {
+        String providerName = key.providerName.toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9/._-]", "_");
+        if (providerName.isEmpty()) providerName = "provider";
+        return ResourceLocation.fromNamespaceAndPath(
+                "painter",
+                "canvas/" + key.entityId + "_" + key.faceIndex + "_" + providerName + "_"
+                        + Integer.toUnsignedString(key.providerName.hashCode(), 36) + "_texture"
+        );
+    }
+
+    private record TextureKey(int entityId, int faceIndex, String providerName) {}
+
+    private static final class TextureEntry {
+        private final ResourceLocation location;
+        private DynamicTexture texture;
+
+        private TextureEntry(ResourceLocation location, DynamicTexture texture) {
+            this.location = location;
+            this.texture = texture;
+        }
+    }
 }

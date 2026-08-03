@@ -21,7 +21,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 
 @Mixin(BlockEntity.class)
@@ -71,22 +73,21 @@ public abstract class BlockEntityMixin implements CanvasDataHolder {
             return;
         }
 
-        // 释放旧的所有面纹理
-        painter$releaseTextures();
-
-        //System.out.println("regenerate !");
-
         List<Pair<CanvasFace, ResourcesBundle>> newList = new ArrayList<>();
-        int faceIndex = 0;
-        for (CanvasFace face : data.faces()) {
-            if (face.pixels() == null || face.pixels().getWidth() <= 0 || face.pixels().getHeight() <= 0 || Arrays.stream(face.pixels().getPixels()).allMatch(a -> a == 0))
+        Set<Integer> retainedFaces = new HashSet<>();
+        for (int faceIndex = 0; faceIndex < data.faces().size(); faceIndex++) {
+            CanvasFace face = data.faces().get(faceIndex);
+            retainedFaces.add(faceIndex);
+            if (face.pixels() == null || face.pixels().getWidth() <= 0 || face.pixels().getHeight() <= 0 || Arrays.stream(face.pixels().getPixels()).allMatch(a -> a == 0)) {
+                CanvasTextureManager.releaseTexture(painter$clientTextureId, faceIndex);
                 continue;
+            }
             ResourcesBundle tex = CanvasTextureManager.createOrUpdateTexture(face, painter$clientTextureId, faceIndex);
-            if (tex != null) {
+            if (tex != null && tex.resourceLocations().length > 0) {
                 newList.add(Pair.of(face, tex));
             }
-            faceIndex++;
         }
+        CanvasTextureManager.releaseUnusedFaces(painter$clientTextureId, retainedFaces);
         this.painter$cachedFaceTextures = newList.isEmpty() ? null : newList;
     }
 
