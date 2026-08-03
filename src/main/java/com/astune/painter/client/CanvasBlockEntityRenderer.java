@@ -27,6 +27,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -92,11 +93,12 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
         BlockState mimicked = cbe.getMimickedState();
         if (mimicked == null) return;
 
-        BakedModel model = dispatcher.getBlockModel(mimicked);
         ModelData mData;
         Level level = Minecraft.getInstance().level;
         if (level != null) {
             BlockAndTintGetter renderLevel = new CanvasMimicRenderView(level);
+            BakedModel model = new CanvasMimicBakedModel(
+                    dispatcher.getBlockModel(mimicked), renderLevel, pos);
             mData = model.getModelData(renderLevel, pos, mimicked, ModelData.EMPTY);
             for (RenderType rt : model.getRenderTypes(mimicked, random, mData)) {
                 poseStack.pushPose();

@@ -79,7 +79,8 @@ public class CanvasRenderEventHandler {
                         Vec3 offset = Vec3.atLowerCornerOf(pos)
                                 .subtract(Vec3.atLowerCornerOf(origin));
 
-                        BakedModel blockModel = dispatcher.getBlockModel(renderState);
+                        BakedModel blockModel = new CanvasMimicBakedModel(
+                                dispatcher.getBlockModel(renderState), renderLevel, pos);
 
                         temp_position.add(pos.immutable());
 

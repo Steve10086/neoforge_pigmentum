@@ -19,6 +19,9 @@
     "PistonBaseBlockMixin",
     "PistonStructureResolverMixin"
   ],
+  "client": [
+    "BlockFaceCullingMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   },
