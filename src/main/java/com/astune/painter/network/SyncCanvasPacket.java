@@ -71,7 +71,10 @@ public record SyncCanvasPacket(BlockPos pos, CanvasData canvasData,
                         mimickedStateChanged = true;
                         canvasBE.setMimickedState(packet.mimickedState.get());
                     }
-                    if (be instanceof CanvasDataHolder holder) holder.painter$regenerateTextures(packet.canvasData);
+                    if (be instanceof CanvasDataHolder holder) {
+                        holder.painter$setCanvasData(packet.canvasData);
+                        holder.painter$regenerateTextures(packet.canvasData);
+                    }
                 }
             }
 
