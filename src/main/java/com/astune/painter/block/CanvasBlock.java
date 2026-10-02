@@ -63,6 +63,24 @@ public abstract class CanvasBlock extends Block implements EntityBlock {
         return be != null ? be.getMimickedState() : null;
     }
 
+    @Override
+    public boolean canHarvestBlock(BlockState state, BlockGetter level, BlockPos pos, Player player) {
+        BlockState mimicked = getMimicked(level, pos);
+        if (mimicked != null && !(mimicked.getBlock() instanceof CanvasBlock)) {
+            return mimicked.getBlock().canHarvestBlock(mimicked, level, pos, player);
+        }
+        return super.canHarvestBlock(state, level, pos, player);
+    }
+
+    @Override
+    public float getExplosionResistance(BlockState state, BlockGetter level, BlockPos pos, Explosion explosion) {
+        BlockState mimicked = getMimicked(level, pos);
+        if (mimicked != null && !(mimicked.getBlock() instanceof CanvasBlock)) {
+            return mimicked.getBlock().getExplosionResistance(mimicked, level, pos, explosion);
+        }
+        return super.getExplosionResistance(state, level, pos, explosion);
+    }
+
 
     @Override
     public boolean useShapeForLightOcclusion(BlockState state) {
