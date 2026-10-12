@@ -1,12 +1,10 @@
 package com.astune.painter.api;
 
 
-import javax.annotation.Nullable;
-
 import com.astune.painter.registry.ModAttachments;
 import com.mojang.datafixers.util.Pair;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -22,10 +20,29 @@ public interface CanvasDataHolder {
         self.setData(ModAttachments.CANVAS_DATA, data);
     }
 
+    /**
+     * @deprecated Client rendering data is exposed by {@link CanvasTextureHolder}.
+     * Kept as a compatibility shim for existing integrations.
+     */
+    @Deprecated
     @Nullable
-    List<Pair<CanvasFace, ResourcesBundle>> painter$getCachedFaceTextures();
+    default List<Pair<CanvasFace, ResourcesBundle>> painter$getCachedFaceTextures() {
+        return null;
+    }
 
-    void painter$regenerateTextures(CanvasData data);
+    /**
+     * @deprecated Client rendering data is exposed by {@link CanvasTextureHolder}.
+     * Kept as a compatibility shim for existing integrations.
+     */
+    @Deprecated
+    default void painter$regenerateTextures(CanvasData data) {
+    }
 
-    void painter$releaseTextures();
+    /**
+     * @deprecated Client rendering data is exposed by {@link CanvasTextureHolder}.
+     * Kept as a compatibility shim for existing integrations.
+     */
+    @Deprecated
+    default void painter$releaseTextures() {
+    }
 }

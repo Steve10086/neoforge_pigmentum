@@ -330,7 +330,9 @@ public class PaintInputHandler {
                     }
                     if(result){
                         holder.painter$setCanvasData(canvas);
-                        holder.painter$regenerateTextures(canvas);
+                        if (be instanceof CanvasTextureHolder textureHolder) {
+                            textureHolder.painter$regenerateTextures(canvas);
+                        }
                         addPendingPixel(pos);
                         frameAffected.computeIfAbsent(pos, k -> new ArrayList<>());
                         if (!frameAffected.get(pos).contains(targetFace)) {
@@ -389,7 +391,9 @@ public class PaintInputHandler {
 
             if (result){
                 holder.painter$setCanvasData(canvas);
-                holder.painter$regenerateTextures(canvas);
+                if (be instanceof CanvasTextureHolder textureHolder) {
+                    textureHolder.painter$regenerateTextures(canvas);
+                }
 
                 addPendingPixel(pos);
                 frameAffected.computeIfAbsent(pos, k -> new ArrayList<>());

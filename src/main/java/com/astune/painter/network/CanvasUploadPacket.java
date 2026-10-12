@@ -90,7 +90,6 @@ public record CanvasUploadPacket(BlockPos pos, CanvasData canvasData, CanvasActi
 
                     if (be instanceof CanvasDataHolder holder) {
                         holder.painter$setCanvasData(canvas);
-                        holder.painter$regenerateTextures(canvas);
                         be.setChanged();
                         //System.out.println("update");
                     }

@@ -1,6 +1,5 @@
 package com.astune.painter.client;
 
-import com.astune.painter.block.CanvasBlockModel;
 import com.astune.painter.mixin.BlockEntityRenderersAccessor;
 import com.astune.painter.registry.ModBlockEntities;
 import com.astune.painter.registry.ModBlocks;

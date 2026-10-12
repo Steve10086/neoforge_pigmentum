@@ -1,7 +1,5 @@
 package com.astune.painter;
 
-import com.astune.painter.client.CanvasRenderEventHandler;
-import com.astune.painter.client.CanvasWorldRenderQueue;
 import com.astune.painter.command.PainterCommands;
 import com.astune.painter.network.CanvasBlockReplacePacket;
 import com.astune.painter.network.CanvasUploadPacket;
@@ -40,7 +38,6 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
 
-import static net.neoforged.fml.loading.FMLEnvironment.dist;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(Painter.MODID)
@@ -69,11 +66,6 @@ public class Painter {
         NeoForge.EVENT_BUS.register(this);
 
         // Register the item to a creative tab
-        if (dist.isClient()) {
-            // 注册到 NeoForge 事件总线（Forge 总线）
-            NeoForge.EVENT_BUS.addListener(CanvasRenderEventHandler::onAddGeometry);
-            NeoForge.EVENT_BUS.addListener(CanvasWorldRenderQueue::onRenderLevelStage);
-        }
         modEventBus.addListener(this::registerPayloadHandlers);
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us

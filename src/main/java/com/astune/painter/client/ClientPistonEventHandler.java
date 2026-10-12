@@ -1,7 +1,7 @@
 package com.astune.painter.client;
 
 import com.astune.painter.Painter;
-import com.astune.painter.api.CanvasDataHolder;
+import com.astune.painter.api.CanvasTextureHolder;
 import com.astune.painter.block.CanvasBlock;
 import com.astune.painter.block.CanvasBlockEntity;
 import com.astune.painter.network.ClientCanvasCache;
@@ -80,7 +80,7 @@ public final class ClientPistonEventHandler {
         CompoundTag data = canvasBlockEntity.saveWithoutMetadata(level.registryAccess());
         ClientPistonCache.store(pos, data);
 
-        if (canvasBlockEntity instanceof CanvasDataHolder holder) {
+        if (canvasBlockEntity instanceof CanvasTextureHolder holder) {
             ClientPistonCache.storeCanvasTexture(pos, holder.painter$getCachedFaceTextures());
         }
     }

@@ -1,6 +1,6 @@
 package com.astune.painter.client;
 
-import com.astune.painter.api.CanvasDataHolder;
+import com.astune.painter.api.CanvasTextureHolder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
@@ -63,7 +63,7 @@ public final class CanvasWorldRenderQueue {
                 if (blockEntity.isRemoved()
                         || blockEntity.getLevel() != level
                         || level.getBlockEntity(entry.pos()) != blockEntity
-                        || !(blockEntity instanceof CanvasDataHolder holder)) {
+                        || !(blockEntity instanceof CanvasTextureHolder holder)) {
                     continue;
                 }
 

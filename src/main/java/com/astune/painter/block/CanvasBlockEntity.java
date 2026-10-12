@@ -4,9 +4,7 @@ import com.astune.painter.api.CanvasData;
 import com.astune.painter.api.CanvasDataHolder;
 import com.astune.painter.api.CanvasFace;
 import com.astune.painter.api.PixelMatrix;
-import com.astune.painter.client.ClientPistonCache;
 import com.astune.painter.network.CanvasPistonDataCache;
-import com.astune.painter.network.ClientCanvasCache;
 import com.astune.painter.registry.ModBlockEntities;
 import com.astune.painter.util.CanvasBlacklist;
 import net.minecraft.core.BlockPos;
@@ -85,11 +83,6 @@ public class CanvasBlockEntity extends BlockEntity {
         if (tag.contains("mimicked_state")) {
             this.mimickedState = NbtUtils.readBlockState(registries.lookupOrThrow(Registries.BLOCK), tag.getCompound("mimicked_state"));
         }
-        if (level != null && level.isClientSide) {
-            level.getLightEngine().checkBlock(worldPosition);
-            net.minecraft.client.Minecraft.getInstance().levelRenderer
-                    .setSectionDirty(worldPosition.getX() >> 4, worldPosition.getY() >> 4, worldPosition.getZ() >> 4);
-        }
     }
 
     @Override
@@ -108,30 +101,12 @@ public class CanvasBlockEntity extends BlockEntity {
                 setChanged();
                 level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
             }
-        } else {
-            CompoundTag movingData = ClientPistonCache.get(this.worldPosition);
-            if (movingData != null && movingData.contains("mimicked_state")) {
-                this.loadWithComponents(movingData, level.registryAccess());
-                if (this instanceof CanvasDataHolder holder) {
-                    CanvasData canvasData = holder.painter$getCanvasData();
-                    if (canvasData != null) {
-                        holder.painter$regenerateTextures(canvasData);
-                        ClientCanvasCache.putCanvas(this.worldPosition, canvasData);
-                    }
-                }
-                if (mimickedState != null) {
-                    ClientCanvasCache.putMimickedState(this.worldPosition, mimickedState);
-                }
-            }
         }
     }
 
     @Override
     public void setRemoved() {
         super.setRemoved();
-        if (this.getLevel() != null && this.getLevel().isClientSide) {
-            ClientCanvasCache.removeMimickedState(this.getBlockPos());
-        }
     }
     
     // 用于客户端初始加载整个区块

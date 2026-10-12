@@ -3,6 +3,7 @@ package com.astune.painter.client;
 import com.astune.painter.api.CanvasData;
 import com.astune.painter.api.CanvasDataHolder;
 import com.astune.painter.api.CanvasFace;
+import com.astune.painter.api.CanvasTextureHolder;
 import com.astune.painter.api.ResourcesBundle;
 import com.astune.painter.api.render.CanvasPixelRenderer;
 import com.astune.painter.api.render.CanvasRendererRegistry;
@@ -51,13 +52,14 @@ public class CanvasBlockEntityRenderer implements BlockEntityRenderer<BlockEntit
                        MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
         renderState(be, poseStack);
         List<Pair<CanvasFace, ResourcesBundle>> textures = null;
-        if (be instanceof CanvasDataHolder holder) {
-            textures = holder.painter$getCachedFaceTextures();
+        if (be instanceof CanvasTextureHolder textureHolder) {
+            textures = textureHolder.painter$getCachedFaceTextures();
             if (textures == null) {
-                CanvasData canvasData = holder.painter$getCanvasData();
+                CanvasData canvasData = be instanceof CanvasDataHolder dataHolder
+                        ? dataHolder.painter$getCanvasData() : null;
                 if (canvasData != null && !canvasData.isEmpty()){
-                    holder.painter$regenerateTextures(canvasData);
-                    textures = holder.painter$getCachedFaceTextures();
+                    textureHolder.painter$regenerateTextures(canvasData);
+                    textures = textureHolder.painter$getCachedFaceTextures();
                     if (textures == null) return;
                 } else {
                     return;

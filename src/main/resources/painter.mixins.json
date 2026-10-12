@@ -5,23 +5,26 @@
   "mixins": [
     "AbstractContainerMenuMixin",
     "BlockEntityMixin",
-    "BlockEntityRenderersAccessor",
     "BlockMixin",
-    "BlockRenderDispatcherMixin",
     "BlockStateBaseMixin",
     "DoorBlockMixin",
-    "ForgeHooksClientMixin",
     "ItemCombinerMenuMixin",
-    "ItemFrameRendererMixin",
     "LevelAccessorMixin",
     "LevelMixin",
-    "LevelRendererMixin",
     "LivingEntityMixin",
     "PistonBaseBlockMixin",
     "PistonStructureResolverMixin"
   ],
   "client": [
-    "BlockFaceCullingMixin"
+    "BlockEntityClientMixin",
+    "BlockEntityRenderersAccessor",
+    "BlockFaceCullingMixin",
+    "BlockRenderDispatcherMixin",
+    "CanvasBlockEntityClientMixin",
+    "CanvasBlockSetControllerClientMixin",
+    "ForgeHooksClientMixin",
+    "ItemFrameRendererMixin",
+    "LevelRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -166,7 +166,6 @@ public final class CanvasStrokeHistory {
             if (be instanceof CanvasDataHolder holder) {
                 CanvasData canvasData = copyCanvasData(target.canvasData());
                 holder.painter$setCanvasData(canvasData);
-                holder.painter$regenerateTextures(canvasData);
                 be.setChanged();
             }
             canvasBE.checkAndRestoreIfNeeded();

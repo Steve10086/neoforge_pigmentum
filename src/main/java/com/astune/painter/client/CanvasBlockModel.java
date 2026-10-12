@@ -1,5 +1,6 @@
-package com.astune.painter.block;
+package com.astune.painter.client;
 
+import com.astune.painter.block.CanvasBlockEntity;
 import com.astune.painter.network.ClientCanvasCache;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
@@ -14,6 +15,8 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.model.data.ModelData;
 import net.neoforged.neoforge.client.model.data.ModelProperty;
 import org.jetbrains.annotations.NotNull;
@@ -21,6 +24,7 @@ import org.jetbrains.annotations.NotNull;
 import javax.annotation.Nullable;
 import java.util.List;
 
+@OnlyIn(Dist.CLIENT)
 public class CanvasBlockModel implements BakedModel {
 
     public static final ModelProperty<BlockState> COPIED_BLOCK = new ModelProperty<>();
@@ -41,25 +45,18 @@ public class CanvasBlockModel implements BakedModel {
             return List.of();
         }
 
-        // 走原版完整流程：被模仿方块的模型 + 被模仿方块的 ModelData
-        // 确保多方块模型（栅栏、活板门）得到正确的属性填充
         BakedModel renderModel = modelShaper.getBlockModel(mimicked);
-        // getModelData 需要真实的 level 和 pos 来计算方块属性（如连接状态）。
-        // chunk builder 不传 level/pos 给 getQuads，但 getModelData 在 chunk 编译前
-        // 已被调用并将结果放入 ModelData。这里我们不知道 level/pos，退而次之：
-        // 传入 null level + BlockPos.ZERO，大多数方块属性基于 BlockState 本身即可解析。
-        // 连接性属性（如栅栏）会走 BlockState 的 canSurvive/getStateDefinition 推导。
-        ModelData md = renderModel.getModelData(null, BlockPos.ZERO, mimicked, ModelData.EMPTY);
-        return renderModel.getQuads(mimicked, side, rand, md, renderType);
+        ModelData modelData = renderModel.getModelData(null, BlockPos.ZERO, mimicked, ModelData.EMPTY);
+        return renderModel.getQuads(mimicked, side, rand, modelData, renderType);
     }
 
     @Override
     public @NotNull ModelData getModelData(@NotNull BlockAndTintGetter level, @NotNull BlockPos pos,
                                            @NotNull BlockState state, @NotNull ModelData modelData) {
         BlockState mimicked = null;
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof CanvasBlockEntity canvasBE) {
-            mimicked = canvasBE.getMimickedState();
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (blockEntity instanceof CanvasBlockEntity canvasBlockEntity) {
+            mimicked = canvasBlockEntity.getMimickedState();
         }
         if (mimicked == null) {
             mimicked = ClientCanvasCache.getMimickedState(pos);

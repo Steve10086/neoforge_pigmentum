@@ -1,7 +1,6 @@
 package com.astune.painter.block;
 
 import com.astune.painter.api.CanvasDataHolder;
-import com.astune.painter.client.ClientPistonCache;
 import com.astune.painter.registry.ModDataComponents;
 import com.astune.painter.util.CanvasBlacklist;
 import net.minecraft.core.BlockPos;

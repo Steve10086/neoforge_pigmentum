@@ -1,14 +1,8 @@
 package com.astune.painter.util;
 
-import com.astune.painter.api.CanvasDataHolder;
-import com.astune.painter.api.CanvasFace;
-import com.astune.painter.api.ResourcesBundle;
 import com.astune.painter.block.CanvasBlock;
 import com.astune.painter.block.CanvasBlockEntity;
-import com.astune.painter.client.ClientPistonCache;
-import com.mojang.datafixers.util.Pair;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
@@ -19,7 +13,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Deque;
 import java.util.ArrayDeque;
-import java.util.List;
 import java.util.Objects;
 
 public final class CanvasBlockSetController {
@@ -116,14 +109,7 @@ public final class CanvasBlockSetController {
     }
 
     private static void cacheClientPistonData(Level level, BlockPos pos, int flags, BlockEntity be) {
-        if (level.isClientSide && (flags == 68 || flags == 82)) {
-            CompoundTag data = be.saveWithoutMetadata(level.registryAccess());
-            ClientPistonCache.store(pos, data);
-            List<Pair<CanvasFace, ResourcesBundle>> texture = ((CanvasDataHolder) be).painter$getCachedFaceTextures();
-            if (texture != null) {
-                ClientPistonCache.storeCanvasTexture(pos, texture);
-            }
-        }
+        // Client-only piston cache behavior is injected from the client mixin set.
     }
 
     private static void syncMimickedState(ServerLevel level, BlockPos pos, CanvasBlockEntity canvasBE) {
